@@ -1,11 +1,8 @@
-setwd("~/gdrive/Dissertation/Aim2")
+########### Prereqs ###########
 library(MASS)
-library(clusterGeneration)
-library(statmod)
-library(glasso)
-
-source('BayesianGLasso/R/blockGLasso.default.R')
-source('BayesianGLasso/R/blockAdGLasso.default.R')
+library(dplyr)
+library(tidyr)
+setwd("~/gdrive/Dissertation/Aim2")
 
 # AR(1) example
 sig<-toeplitz(.9**(0:9)) #toeplitz(.9**(0:109))
