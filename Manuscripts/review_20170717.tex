@@ -1,0 +1,226 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,graphicx,float,hyperref,color}
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{natbib}
+
+\DeclareMathOperator{\PP}{P}
+\DeclareMathOperator{\EE}{E}
+\DeclareMathOperator{\argmin}{argmin}
+\DeclareMathOperator{\argmax}{argmax}
+\DeclareMathOperator{\ent}{H}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\DE}{DE}
+\DeclareMathOperator{\EXP}{EXP}
+\DeclareMathOperator{\GA}{GA}
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+
+\title{Frequentist and Bayesian estimation of Gaussian Graphical Models}
+\author{Patrick J. Trainor\textsuperscript{1}, Andrew P. DeFilippis\textsuperscript{1}, \& Shesh N. Rai\textsuperscript{2} \\ \\
+	\textsuperscript{1}Division of Cardiovascular Medicine, Department of Medicine\\
+	\textsuperscript{3}Department of Bioinformatics and Biostatistics
+\\
+University of Louisville}
+\date{}
+
+\begin{document}
+	
+\maketitle
+
+\begin{abstract}
+Abstract is here...
+\end{abstract}
+
+\section{Introduction}
+Across multiple domains including finance, economics, molecular biology, and machine vision, stochastic systems are observed via the realization of multiple random variables and the determination of the relationship between the random variables is an essential inferential task. For example, researchers in the field of metabolomics often sample from the repertoire of small molecules contained in a cell or biofluid to make inference regarding metabolic responses to the environment or differences across phenotypes \cite{johnson2016}. Central to making inferences regarding metabolic processes is determining the structure of probabilistic interactions between sets metabolites. In macroeconomics, to quantify financial risk that could propagate across  borders, international bank settlements may be sampled and interrogation of the dependence structure of these random variables reveals cross border flows that may result in cross-border contagion during a financial crisis \cite{giudici2016}.
+
+\section{Gaussian graphical models}
+An undirected probabilistic graphical model also known as a Markov Random Fields (MRFs) is a graph $G=(V,E)$ in which random variables $X_i\in V$, $i\in \{1,2,...p\}$ are represented by vertices and edges in the edge set $E \subseteq V \times V$ represent probabilistic interactions  \citep{koller2009}. If the joint distribution of the random variables  is assumed to be a multivariate normal distribution, that is $\textbf{X}\sim \mathcal{N}(\boldsymbol{\mu},\boldsymbol{\Omega}^{-1})$ where $\boldsymbol{\Omega}$ is the concentration matrix and the inverse of the covariance matrix, then the MRF is a Gaussian Graphical Model (GGM), in which each vertex $X_i$ has a marginal normal distribution, and normal conditional distributions $X_i|X_j$. We immediately note the likelihood given a sample $\textbf{X}=(\textbf{x}_1,\textbf{x}_1,\hdots,\textbf{x}_n)^T$:
+\begin{align}
+L(\boldsymbol{\Omega}|\textbf{X})&=(2 \pi)^{-np/2}|\boldsymbol{\Omega}|^{n/2} \exp \left(-\frac{1}{2}\sum_{i=1}^{n} (\textbf{x}_i-\boldsymbol{\mu})^T \boldsymbol{\Omega} (\textbf{x}_i-\boldsymbol{\mu})\right) \\
+&=(2 \pi)^{-np/2}|\boldsymbol{\Omega}|^{n/2} \exp \left(-\frac{1}{2} \langle \textbf{K}, \boldsymbol{\Omega}\rangle\right)
+\end{align}
+where $\sum_{i=1}^{n}$
+
+In order to determine a Gaussian Graphical model, the graph topology and parameters must be estimated separately \citep{meinshausen2006} or jointly \citep{friedman2007,yuan2007,banerjee2008}. Given a mean centered data matrix $\textbf{X}$ with $\dim(\textbf{X})=n\times p$, estimation of the concentration matrix (inverse of the joint distribution covariance) $\boldsymbol{\Omega}=\boldsymbol{\Sigma}^{-1}$ fully determines the graph topology as well as the multivariate Gaussian distribution parameters. The entries of $\boldsymbol{\Omega}$ are of particular importance; $\omega_{ij}$ is the partial correlation between $X_i$ and $X_j$. Consequently, $\omega_{ij}=0$ implies $X_i$ and $X_j$ are conditionally independent.
+
+\section{Regularization methods}
+
+\subsection{The Graphical Lasso}
+ To find the maximum likelihood estimator of $\boldsymbol{\Omega}$ the log likelihood of the concentration matrix is noted:
+\begin{align} 
+l(\boldsymbol{\Omega})\propto\log (\det \boldsymbol{\Omega})-\tr \left( \textbf{S} \boldsymbol{\Omega} \right),
+\end{align}
+where $\textbf{S}=\frac{1}{n}\textbf{X}^T \textbf{X}$ is the empirical covariance matrix. In the case that $p>n$ maximization of the log likelihood function is not guaranteed to be convex [check]. To overcome this problem, several approaches have been proposed for maximizing the $L_1$ norm penalized log-likelihood \citep{friedman2007,yuan2007,banerjee2008}:
+\begin{align}
+l(\boldsymbol{\Omega})\propto\log (\det \boldsymbol{\Omega})-\tr \left( \textbf{S} \boldsymbol{\Omega} \right)-\rho ||\boldsymbol{\Omega}||_1
+\label{eq:likelihood}
+\end{align}
+where $\rho$ is the penalty parameter and the optimization is over the space of positive definite matrices of the same dimension as $\boldsymbol{\Omega}$.
+The solution proposed by \cite{friedman2007}, known as the graphical Lasso employs a block coordinate descent for maximizing the penalized likelihood. To formulate a block-wise procedure the \cite{friedman2007} first note the following partitioning along the last row and last column of $\textbf{S}$ and $\textbf{W}=\hat{\boldsymbol{\Sigma}}$:
+\begin{align}
+\textbf{W}=
+\begin{bmatrix}
+\textbf{W}_{11} & \textbf{w}_{12} \\
+\textbf{w}_{12}^T & w_{22}.
+\end{bmatrix}, \quad
+\begin{bmatrix}
+\textbf{S}_{11} & \textbf{s}_{12} \\
+\textbf{s}_{12}^T & s_{22}.
+\end{bmatrix}
+\end{align}  
+Given this partition, the maximization of the log-likelihood (Eq. \ref{eq:likelihood}) is equivalent to the following constraint problem \cite{banerjee2008}:
+\begin{align}
+\textbf{w}_{12}=\argmin_{\textbf{y}} \{ \textbf{y}^T \textbf{W}_{11} ^{-1} \textbf{y} : ||\textbf{y}-\textbf{s}_{12}||_{\infty} \leq \rho \}.
+\end{align}
+\cite{banerjee2008} show that by convex duality, if $\hat{\beta}$ minimizes:
+\begin{align}
+\hat{\beta}=\argmin_{\beta} \{\frac{1}{2} ||\textbf{W}_{11}^{1/2}\beta-b||^2 +\rho ||\beta||_1 \}
+\label{eq:dual}
+\end{align}
+where $b=\textbf{W}_{11}^{-1/2} \textbf{s}_{12}$, then $\textbf{w}_{12}=\textbf{W}_{11} \hat{\beta}$.
+
+Critically, \cite{friedman2007} [LOH]
+
+[Add lasso problem and lambda optimization]
+
+\subsection{The SCAD penalty and the Adaptive Graphical Lasso}
+It has been shown that the linear increase penalization relative to the norm incurred with $L_1$ regularization of parameters introduces bias, especially in the case of parameters that have large magnitude \citep{fan2009,lam2009}. Two alternative penalized likelihoods have been proposed as a solution to this known problem and have been shown to satisfy the oracle property: the smoothly clipped absolute deviation (SCAD) penalization and the adaptive lasso. The oracle property states that an optimal estimator of [LOH] and it has been shown that the oracle property is not universally satisfied by the lasso \citep{zou2006}. The lasso, SCAD penalized estimation, and adaptive lasso share similar developmental histories, being developed first for variable selection and linear/generalized linear model parameter estimation with later extension to GGM parameter estimation. The smoothly clipped absolute deviation is a non-concave penalty function defined as \citep{fan2001}:
+\begin{align}
+f_{\lambda,a}(\theta)=
+\begin{cases} 
+\lambda |\theta| & \text{if} \; |\theta|\leq \lambda \\
+-\left(\frac{|\theta|^2 -2a \lambda |\theta|+\lambda^2}{2(a-1)}\right)& \text{if}\; |\theta| \in (\lambda,a \lambda] \\
+\frac{(a+1)\lambda^2}{2} & \text{if} \; |\theta|>a \lambda 
+\end{cases}
+\end{align}
+The behavior of this penalty with respect to coefficient magnitude can be examined given the continuous derivative derivative of the SCAD penalty function:
+\begin{align}
+f'_{\lambda,a}(\theta)=\lambda \left[I(\theta \leq \lambda) + \frac{(a \lambda-\theta)_+}{(a-1)\lambda}I(\theta>\lambda)\right]
+\end{align}
+for $\theta > 0$ and $\alpha>2$. In general, the advantage of this penalization over $L_1$ norm penalization is that large values of $\theta$ are not excessively penalized. [LOH: Oracle property and behavior of the derivative] The two parameters of the penalty function can be optimized by cross-validation or via minimization of Bayes risk as was done in \cite{fan2001}. To generalize the SCAD penalty for regularized estimation of GGMs, the SCAD penalized log-likelihood is noted [LOH]:
+\begin{align*}
+l(\boldsymbol{\Omega}) \propto \log(\det \boldsymbol{\Omega})-\tr \left(\frac{\textbf{S}}{n} \boldsymbol{\Omega} \right) - \sum_{i=1}^{p} \sum_{j=1}^{p} f_{\lambda,a} (|\omega_{ij}|)
+\end{align*}
+
+After demonstrating the conditions in which lasso variable selection is not guaranteed to be consistent and hence not satisfying the oracle property, \cite{zou2006} modified the $L_1$ lasso penalty $\lambda ||\boldsymbol{\theta}||_1$ to incorporate parameter specific weights $\textbf{w}$ [LOH] yielding penalty $\lambda ||\textbf{w} \boldsymbol{\theta}||_1$. The penalized likelihood for the adaptive graphical lasso is then:
+\begin{align}
+	\log(\det \boldsymbol{\Omega})-\tr \left(\frac{\mathbf{S}}{n} \boldsymbol{\Omega}\right) - \lambda \sum_{1\leq i \leq p} \sum_{1 \leq j \leq p} w_{ij} |\omega_{ij}|.
+\end{align}
+In this likelihood, the weights that contribute to the penalization are $w_{ij}=|\hat{\omega}_{ij}|^\alpha$ for a fixed $\alpha >0$ and a consistent estimate of the concentration matrix with entries $\hat{\omega}_{ij}$.
+
+\subsection{The Bayesian Graphical Lasso}
+A Bayesian interpretation of the regular graphical lasso \citep{friedman2007} has been shown previously \citep{wang2012}. Given the following hierarchical model:
+\begin{align}
+	p(\textbf{x}_i|\boldsymbol{\Omega}) =& \mathcal{N}(\textbf{0},\boldsymbol{\Omega}^{-1}) \quad \text{for} \; i=1,2,\hdots,n\\
+	p(\boldsymbol{\Omega}|\lambda) =& \frac{1}{C} \prod_{i<j} \DE(\omega_{ij}|\lambda) \prod_{i=1}^{p} \EXP (\omega_{ii} | \lambda / 2) \cdot 1_{\boldsymbol{\Omega}\in M^+},
+	\label{eq:bGLassoModel}
+\end{align}
+it has been demonstrated the mode of the posterior distribution of $\boldsymbol{\Omega}$ is the graphical lasso estimate given penalty parameter $\rho=\lambda/n$. In this model, the prior distribution of the off-diagonal entries of the concentration matrix follow a double exponential distribution centered at zero with scale parameter $\lambda$, while the prior distribution of the diagonal entries of the concentration matrix is exponential with scale parameter $\lambda/2$. \Citep{wang2012}  noted that the hierarchical model in (\ref{eq:bGLassoModel}) can be represented as a scale mixture of normal distributions \cite{andrews1974,west1987} leading to the following prior distribution:
+\begin{align}
+	p(\boldsymbol{\omega}| \boldsymbol{\tau},\lambda)=\frac{1}{C_{\boldsymbol{\tau}}} \prod_{i<j} \left[ \frac{1}{\sqrt{2\pi \tau_{ij}}} \exp \left(- \frac{\omega_{ij}^2}{2\tau_{ij}}\right) \right] \prod_{i=1}^{p} \left[\frac{\lambda}{2} \exp \left(-\frac{\lambda}{2}\omega_{ii} \right)\right] \cdot 1_{\boldsymbol{\Omega}\in M^+}
+\end{align}
+
+\cite{wang2012} exploited this representation to develop a block Gibbs sampler for simulating the posterior distribution. This sampler is predicated on identical partitioning of the concentration matrix $\boldsymbol{\Omega}$, products matrix $\boldsymbol{S}$, and latent scale parameters matrix $\mathbfcal{T}$:
+\begin{align}
+\begin{bmatrix}
+\boldsymbol{\Omega}_{11} & \boldsymbol{\omega}_{12} \\
+\boldsymbol{\omega}_{12}^T & \omega_{22}
+\end{bmatrix},
+\begin{bmatrix}
+\mathbf{S}_{11} & \mathbf{s}_{12} \\
+\mathbf{s}_{12}^T & s_{22}
+\end{bmatrix},
+\begin{bmatrix}
+\mathbfcal{T}_{11} & \boldsymbol{\tau}_{12} \\
+\boldsymbol{\tau}_{12}^T & \tau_{22}
+\end{bmatrix}.
+\end{align}
+The Gibbs sampler then samples from the conditional distribution of the last column, $(\boldsymbol{\omega}_{12}, \omega_{22})^T$ of $\Omega$:
+\begin{align}
+p(\boldsymbol{\omega}_{12}, \omega_{22}|\boldsymbol{\Omega}_{11},\mathbfcal{T},\textbf{X},\lambda) \propto \left(\omega_{22}-\boldsymbol{\omega}_{12}^T \boldsymbol{\Omega}_{11}^{-1}\boldsymbol{\omega}_{12} \right)^{n/2} \exp \{ - \frac{1}{2}\left[ \boldsymbol{\omega}_{12}^T \textbf{D}_{\boldsymbol{\tau}} \boldsymbol{\omega}_{12}+ 2 
+\textbf{s}_{12}^T \boldsymbol{\omega}_{12} + (s_{22}+\lambda)\omega_{22}\right] \}
+\end{align}
+
+In the same work, \cite{wang2012} proposed a Bayesian approach to the adaptive graphical lasso developed by \cite{fan2009}. The hierarchical model proposed by for the adaptive lasso is:
+\begin{align}
+	p(\mathbf{x}_i|\boldsymbol{\Omega}) = & \mathcal{N}(\mathbf{0,\boldsymbol{\Omega}}^{-1}) \quad \text{for} \; i=1,2,\hdots,n\\
+		p(\boldsymbol{\Omega}|\{\lambda_{ij}\}_{i\leq j}) = & C^{-1} \prod_{i<j} \DE(\omega_{ij}|\lambda_{ij}) \prod_{i=1}^{p} \EXP (\omega_{ii} | \lambda_{ii} / 2) \cdot 1_{\boldsymbol{\Omega}\in M^+}\\
+		p(\{\lambda_{ij}\}_{i<j}|\{\lambda_{ii}\}_{i=1}^p) &\propto C_{\{\lambda_{ij}\}_{i\leq j}} \prod_{i<j} \GA(r,s)
+\end{align}
+As with the frequentist adaptive graphical lasso, the Bayesian adaptive graphical lasso proposed by \citep{wang2012} incorporates differential shrinkage of entries $\omega_{ij}$ according to an estimate $\hat{\omega}_{ij}$. However, as opposed to a fixed relationship between the norm of the current estimate $\hat{\omega}_{ij}$ and the size of the shrinkage parameter $\lambda$ uncertainty about $\lambda$ is incorporated by assuming a gamma distribution for $\lambda_{ij}$. Conditional on the concentration matrix, $\lambda_{ij}$ are distributed as:
+\begin{align}
+\lambda_{ij}|\boldsymbol{\Omega}\sim \GA(1+r,|\omega_{ij}|+s)
+\end{align}
+
+Given that the Bayesian adaptive graphical lasso allows for differential shrinkage for each $\omega_{ij}$ via shrinkage parameter $\lambda_{ij}$ drawn from a non-informative distribution, it is natural to suppose that adaptive penalization would allow for the incorporation of apriori knowledge about the conditional relationship between $X_i$ and $X_j$. \cite{peterson2013} propose that rather than fixing a non-informative prior gamma distribution scale $s$ parameter, this parameter could capture prior belief regarding the conditional relationship between $X_i$ and $X_j$. They assume that if an a priori defined unweighted graph describes the biological relationship between random variables $X_i$, then  the pairwise distance between vertices $X_i$ and $X_j$, that is $d(X_i,X_j)$, could be used as a hyperparameter for $s_{ij}$. In their specific case they set:
+\begin{align}
+	s_{ij}=
+	\begin{cases} 
+	d_{ij}^{-1} \cdot  10^{-6+c} & \text{if} \; d_{ij}<\infty \\
+	10^{-6} & \text{if} \; d_{ij}=\infty
+	\end{cases},
+\end{align}
+where $d_{ij}=d(X_i,X_j)$ was defined as the minimum path distance determined via breadth-first search, and $c\in (0,6)$ is a positive constant. This specification of the gamma scale parameter has the effect of shifting the mean of the prior distribution for the penalty parameter $\lambda_{ij}$ towards zero when verteces $X_i$ and $X_j$ are close with respect to the a priori graph.
+
+An important contrast between the frequentist and Bayesian graphical lasso is that given a continuous prior distribution, the Bayesian lasso does not possess and innate edge selection ability. Specifically, as the Bayesian graphical lasso given a continuous prior places positive probability on the posterior entries of the concentration matrix, $\omega_{ij}$, a graph selected from the posterior distribution of $\boldsymbol{\Omega}$ will be fully connected, that is an edge will exist between each pair of vertices of the graph $G$. Heuristics are for conducting edge selection are discussed in both \citep{wang2012}  and \cite{peterson2013}. The selection operator discussed in \citep{wang2012} was based on a heuristic appeal to the argument made in \citep{carvalho2010}.  \citep{carvalho2010} discusses a discrete mixture model:
+\begin{align}
+	\theta_i \sim (1-p)\delta_0 + pg(\theta_i)
+\end{align}
+where $\delta_0$ is the Dirac distribution and $p$ is the prior mixing probability. Under this model the posterior mean of $\theta_i$ is then:
+\begin{align}
+	\EE(\theta_i|\textbf{X})=\PP(\theta_i\neq 0|\textbf{X})\EE_g(\theta_i|\textbf{X},\theta_i\neq 0).
+\end{align}
+\citep{wang2012} then claims that using the Wishart conjugate prior for the concentration matrix as the distribution $g$, the same factorization can be used to substantiate the claim that $\omega \neq 0$ if and only if:
+\begin{align}
+	\tilde{\pi}_{ij}=\frac{\tilde{\rho}_{ij}}{\EE_g(\rho_{ij}|\textbf{X})}>0.5
+\end{align}
+where $\tilde{\rho}_{ij}$ is the posterior mean estimator of $\rho_{ij}$ and $\tilde{\pi}_{ij}$ is the amount of shrinkage enforced by the graphical lasso prior. In contrast, \citep{peterson2013} proposes that a rejection region approach could be employed using posterior credible intervals. Specifically, they suppose edge selection should include an edge between $X_i$ and $X_j$ if and only if the 95\% posterior credible interval for $\omega_{ij}$ does not include 0. The authors then use a thresholding approach in the application discussed, omitting edges between vertices if $|\omega_{ij}|\leq 0.1$.
+
+\section{Bayesian inference given \emph{G}-Wishart priors}
+An alternative Bayesian treatment focuses on  \cite{dawid1993,roverato2002,atay2005,dobra2011a,dobra2011b,wang2012,cheng2012} the estimation of GGMs via conjugate inference for $\boldsymbol{\Omega}$ given that $\boldsymbol{\Omega}$ is faithful to a fixed graph $G$, as opposed to estimation with shrinkage.
+
+Early work \citep{dawid1993} focused on the case of decomposable GGMs. A decomposition of a graph $G$ is a pair subsets $(R,S)$, $R\subseteq V$, $S\subseteq V$ such that $V=R \cup S$, the graph defined by $R \cap S$ is complete, and $R \cap S$ is the separator of $R$ and $S$--that is any path between $R$ and $S$ must go through $R \cap S$. A graph $G$ is a decomposable graph if it complete or there exists a proper decomposition $(R,S)$ of $G$. Equivalently, a graph is decomposable if each prime component of the graph is complete \cite{roverato2002}. \cite{dawid1993} first describe the Hyper Inverse Wishart distribution for cliques $C\in \mathcal{C}$ where $\{C_1,C_2, \hdots,C_k \}$ is a perfectly ordered set of cliques in the decomposable graph $G$ and $S$ [LOH]
+
+\begin{align}
+f_G(\boldsymbol{\Sigma}^{\mathcal{V}}|\delta,\textbf{D}^{\mathcal{V}})= \frac{\prod_{j=1}^k f_{C_j}(\boldsymbol{\Sigma}_{C_j C_j}|\delta,\textbf{D}_{C_j C_j})}{\prod_{j=2}^k f_{S_j}(\boldsymbol{\Sigma}_{S_j S_j}|\delta,\textbf{D}_{S_j S_j})}
+\end{align}
+
+\cite{roverato2002} advanced the theory substantially by proposing methodology for inference given arbitrary graphs (including non-decomposable graphs). \cite{roverato2002} shows that if $G=(V,E)$ is an arbitrary graph then $\boldsymbol{\Sigma} \sim HIW_G$
+
+This $G$-Wishart distribution has the following form: 
+\begin{align}
+p(\boldsymbol{\Omega}|G)=I_G(b,D)^{-1}|\boldsymbol{\Omega}|^{(b-2)/2} \exp \left[-\frac{1}{2} \tr(D \boldsymbol{\Omega}) \right] 1_{ \{\boldsymbol{\Omega} \in M^+(G)\} }
+\end{align}
+where $I_G(b,D)$ is a normalization constant that ensures that $p(\boldsymbol{\Omega}|G)$ is a proper distribution:
+\begin{align}
+I_G(b,D)=\int |\boldsymbol{\Omega}|^{(b-2)/2} \exp \left[-\frac{1}{2} \tr(D \boldsymbol{\Omega}) \right] 1_{ \{\boldsymbol{\Omega} \in M^+(G)\} } d\boldsymbol{\Omega}
+\end{align}
+
+\section{Tertiary dirrections of Gaussian graphical modeling}
+\subsection{Sparse conditional Gaussian graphical models}
+ \cite{yin2011} note that in many situations the assumption that the multivariate normal distribution equivalent to a GGM,  $\textbf{x}\sim \mathcal{N}(\boldsymbol{\mu},\boldsymbol{\Omega}^{-1})$, has constant mean $\boldsymbol{\mu}$ may not be satisfied. Instead, they examine the case in which a multivariate random variable $\textbf{y}$ follows a normal distribution with mean conditional on a multivariate random variable $\textbf{x}$, that is: $\textbf{y}|\textbf{x}\sim \mathcal{N}(\boldsymbol{\Gamma} \textbf{x},\boldsymbol{\Omega}^{-1})$. In this case a $L_1$ penalized log-likelihood with the following form can be optimized:
+ \begin{align}
+ \log( \det \boldsymbol{\Omega})-\tr (\textbf{S}_{\Gamma}\boldsymbol{\Omega})-\lambda || \boldsymbol{\Gamma} ||_1 - \rho ||\boldsymbol{\Omega}||_1,
+ \end{align}
+ where 
+ \begin{align*}
+ \textbf{S}_{\Gamma}=\frac{1}{n}\sum_{i=1}^{n} (\textbf{y}_i-\Gamma \textbf{x}_i)(\textbf{y}_i-\Gamma \textbf{x}_i)^T.
+ \end{align*}
+ After formulating this penalized likelihood, \cite{yin2011} propose a two-step algorithm for maximizing this likelihood. In the first step, a block-wise coordinate descent algorithm iteratively solves Lasso subproblems to furnish an estimate of $\boldsymbol{\Omega}$ as with the regular graphical Lasso \cite{friedman2007}.
+
+Hub gLasso. \cite{tan2014}
+
+\subsection{Inference of multiple Gaussian graphical models}
+The joint graphical lasso for inverse covariance estimation across multiple classes \cite{danaher2014}\\
+
+Bayesian inference of multiple GGMs \cite{peterson2015}
+
+\section{Discussion}
+
+\bibliographystyle{apa}
+\bibliography{../../DissBib}
+
+
+\end{document}

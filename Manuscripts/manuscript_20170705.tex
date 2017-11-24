@@ -1,0 +1,149 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,graphicx,float,hyperref,color}
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{natbib}
+
+\DeclareMathOperator{\PP}{P}
+\DeclareMathOperator{\argmax}{argmax}
+\DeclareMathOperator{\ent}{H}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\DE}{DE}
+\DeclareMathOperator{\EXP}{EXP}
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+
+\title{Inferring a metabolic interactome given apriori knowledge of human metabolism via the Bayesian adaptive graphical lasso}
+\author{Patrick J. Trainor\textsuperscript{1}, Samantha M. Carlisle\textsuperscript{2}, Shesh N. Rai\textsuperscript{3}, \& Andrew P. DeFilippis\textsuperscript{1}\\ \\
+	\textsuperscript{1}Division of Cardiovascular Medicine, Department of Medicine\\
+	\textsuperscript{2}Department of Pharmacology and Toxicology\\
+	\textsuperscript{3}Department of Bioinformatics and Biostatistics
+\\
+University of Louisville}
+\date{}
+
+\begin{document}
+	
+\maketitle
+
+\begin{abstract}
+Abstract is here...
+\end{abstract}
+
+\section{Introduction}
+Many human diseases are precipitated by or result in metabolic dysregulation. For example, significant metabolic changes are associated with tumorigenesis including, but not limited to \citealp{pavlova2016}: (1) dysregulation in the uptake of glucose and amino acids, (2) opportunistic modes of nutrient acquisition, and (3) use of intermediates of glycolysis and TCA cycle for biosynthesis. Likewise, acute disease states are often characterized by significant metabolic changes. For example, evidence of significant metabolic perturbations has been observed in plasma following acute myocardial infarction (MI: heart attack) \citep{trainor2017}. Given that changes in metabolism often accompany or precipitate disease states, it is not surprising that untargeted metabolomics analyses of human biospecimens have demonstrated disease state associated metabolic profiles (see for example: \citep{defilippis2017}--NEED MORE CITATIONS). However, making inferences about metabolic processes using untargeted metabolomics data remains a significant analytical challenge, especially given metabolite extractions from biospecimens such as blood plasma, serum, or urine. 
+
+\section{Background}
+
+\subsection{Gaussian graphical models (GGM)}
+An undirected probabilistic graphical model also known as a Markov Random Fields (MRFs) is a graph $G=(V,E)$ in which random variables $X_i\in V$, $i\in \{1,2,...p\}$ are represented by vertices and edges in the edge set $E \subseteq V \times V$ represent probabilistic interactions  \citep{koller2009}. Predicated on assumption that biochemical relationships (e.g. product-substrate relations) between metabolites generate probabilistic dependence,  a MRF can be used to describe the relationships between metabolites. If the joint distribution of the random variables (metabolites) is assumed to be a normal distribution, then the MRF is a Gaussian Graphical Model (GGM), in which each vertex $X_i$ has a marginal normal distribution, and normal conditional distributions $X_i|X_j$. 
+
+\subsection{GGM parameter estimation}
+In order to determine the topology of the metabolic interactome (that is the GGM structure), the graph topology and parameters must be estimated separately \citep{meinshausen2006} or jointly \citep{friedman2007,yuan2007,banerjee2008}. Given a mean centered data matrix $\textbf{X}$ with $\dim(\textbf{X})=n\times p$, estimation of the concentration matrix (inverse of the joint distribution covariance) $\boldsymbol{\Omega}=\boldsymbol{\Sigma}^{-1}$ fully determines the graph topology as well as the multivariate Gaussian distribution parameters. The entries of $\boldsymbol{\Omega}$ are of particular importance; $\omega_{ij}$ is the partial correlation between $X_i$ and $X_j$. Consequently, $\omega_{ij}=0$ implies $X_i$ and $X_j$ are conditionally independent.
+
+\subsubsection{The graphical lasso}
+ To find the maximum likelihood estimator of $\boldsymbol{\Omega}$ the log likelihood of the concentration matrix is noted:
+\begin{align} 
+l(\boldsymbol{\Omega})\propto\log (\det \boldsymbol{\Omega})-\tr \left( \frac{\boldmath{S}}{n} \boldsymbol{\Omega} \right),
+\end{align}
+where $\textbf{S}=\textbf{X}^T \textbf{X}$ is the sum of products matrix. In the case that $p>n$ maximization of the log likelihood function is not guaranteed to be convex. To overcome this problem, several approaches have been proposed in maximizing the $L_1$ norm penalized log-likelihood \citep{friedman2007,yuan2007,banerjee2008}:
+\begin{align}
+l(\boldsymbol{\Omega})\propto\log (\det \boldsymbol{\Omega})-\tr \left( \boldmath{\frac{S}{n}} \boldsymbol{\Omega} \right)-\rho ||\boldsymbol{\Omega}||_1
+\end{align}
+where $\rho$ is the penalty parameter and the optimization is over the space of positive definite matrices of the same dimension as $\boldsymbol{\Omega}$.
+The solution proposed by \cite{friedman2007}, known as the graphical Lasso, makes use of the fact that if $\textbf{W}=\boldsymbol{\Omega}^{-1}$, then both matrices may be partitioned as:
+\begin{align}
+\begin{bmatrix}
+\textbf{W}_{11} & \textbf{w}_{12} \\
+\textbf{w}_{12}^T & \textbf{w}_{22}
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{\Omega}_{11} & \boldsymbol{\omega}_{12} \\
+\boldsymbol{\omega_{12}}^T &  \boldsymbol{\omega}_{22}
+\end{bmatrix}=
+\begin{bmatrix}
+\textbf{I} & \textbf{0} \\
+\textbf{0}^T &  \textbf{1}
+\end{bmatrix}.
+\end{align} 
+The graphical lasso iteratively solves via coordinate descent the following gradient equation:
+\begin{align}
+\textbf{W}_{11}(-\boldsymbol{\omega}_{12}/\boldsymbol{\omega}_{22})-\textbf{s}_{12}+\rho \sign(-\boldsymbol{\omega}_{12}/\boldsymbol{\omega}_{22})=0,
+\end{align}
+by cycling through partitions of $\textbf{W}$ and $\boldsymbol{\Omega}$.
+
+\subsubsection{The adaptive graphical lasso}
+It has been shown that the linear increase penalization relative to the norm incurred with $L_1$ regularization introduces bias, especially in the case of entries of large magnitude \cite{fan2009,lam2009}. 
+The penalized likelihood for the adaptive graphical lasso is:
+\begin{align}
+	\log(\det \boldsymbol{\Omega})-\tr \left(\frac{\mathbf{S}}{n}\right) - \lambda \sum_{1\leq i \leq p} \sum_{1 \leq j \leq p} w_{ij} |w_{ij}|.
+\end{align}
+In this likelihood, the weights that contribute to the penalization are $w_{ij}=|\hat{\omega}_{ij}|^\alpha$ for a fixed $\alpha >0$.
+
+\subsubsection{The Bayesian graphical lasso}
+A Bayesian interpretation of the graphical lasso has been shown previously \citep{wang2012}. Given the following hierarchical model:
+\begin{align}
+	p(\textbf{x}_i|\boldsymbol{\Omega}) =& \mathcal{N}(\textbf{0},\boldsymbol{\Omega}^{-1}) \quad \text{for} \; i=1,2,\hdots,n\\
+	p(\boldsymbol{\Omega}|\lambda) =& \frac{1}{C} \prod_{i<j} \DE(\omega_{ij}|\lambda) \prod_{i=1}^{p} \EXP (\omega_{ii} | \lambda / 2) \cdot 1_{\boldsymbol{\Omega}\in M^+}.
+	\label{eq:bGLassoModel}
+\end{align}
+It has been demonstrated the mode of the posterior distribution of $\boldsymbol{\Omega}$ is the graphical lasso estimate given penalty parameter $\rho=\lambda/n$. In this model, the prior distribution of the off-diagonal entries of the concentration matrix is double exponential centered at zero with scale parameter $\lambda$, while the prior distribution of the diagonal entries of the concentration matrix is exponential with scale parameter $\lambda/2$. \Citep{wang2012}  noted that the hierarchical model in (\ref{eq:bGLassoModel}) can be represented as a scale mixture of normal distributions \cite{andrews1974,west1987} leading to the following prior distribution:
+\begin{align}
+	p(\boldsymbol{\omega}| \boldsymbol{\tau},\lambda)=\frac{1}{C_{\boldsymbol{\tau}}} \prod_{i<j} \left[ \frac{1}{\sqrt{2\pi \tau_{ij}}} \exp \left(- \frac{\omega_{ij}^2}{2\tau_{ij}}\right) \right] \prod_{i=1}^{p} \left[\frac{\lambda}{2} \exp \left(-\frac{\lambda}{2}\omega_{ii} \right)\right] \cdot 1_{\boldsymbol{\Omega}\in M^+}
+\end{align}
+
+\Citep{wang2012} exploited this representation to develop a block Gibbs sampler for simulating the posterior distribution. This sampler is predicated on identical partitioning of the concentration matrix $\boldsymbol{\Omega}$, products matrix $\boldsymbol{S}$, and latent scale parameters matrix $\mathbfcal{T}$:
+\begin{align}
+\begin{bmatrix}
+\boldsymbol{\Omega}_{11} & \boldsymbol{\omega}_{12} \\
+\boldsymbol{\omega}_{12}^T & \omega_{22}
+\end{bmatrix},
+\begin{bmatrix}
+\mathbf{S}_{11} & \mathbf{s}_{12} \\
+\mathbf{s}_{12}^T & s_{22}
+\end{bmatrix},
+\begin{bmatrix}
+\mathbfcal{T}_{11} & \boldsymbol{\tau}_{12} \\
+\boldsymbol{\tau}_{12}^T & \tau_{22}
+\end{bmatrix}
+\end{align}. 
+The Gibbs sampler then samples from the conditional distribution of the last column, $(\boldsymbol{\omega}_{12}, \omega_{22})^T$ of $\Omega$:
+\begin{align}
+p(\boldsymbol{\omega}_{12}, \omega_{22}|\boldsymbol{\Omega}_{11},\mathbfcal{T},\textbf{X},\lambda) \propto \left(\omega_{22}-\boldsymbol{\omega}_{12}^T \boldsymbol{\Omega}_{11}^{-1}\boldsymbol{\omega}_{12} \right)^{n/2} \exp \{ - \frac{1}{2}\left[ \boldsymbol{\omega}_{12}^T \textbf{D}_{\boldsymbol{\tau}} \boldsymbol{\omega}_{12}+ 2 
+\textbf{s}_{12}^T \boldsymbol{\omega}_{12} + (s_{22}+\lambda)\omega_{22}\right] \}
+\end{align}
+
+A Bayesian approach has been extended to the adaptive graphical lasso developed by \cite{fan2009}. The Bayesian model proposed by \citep{wang2012} for the adaptive lasso is:
+\begin{align}
+	p(\mathbf{x}_i|\boldsymbol{\Omega}) = & \mathcal{N}(\mathbf{0,\boldsymbol{\Omega}}^{-1}) \quad \text{for} \; i=1,2,\hdots,n\\
+		\boldsymbol{\Omega}|\{\lambda_{ij}\}_{i\leq j} \sim & C^{-1} \prod_{i<j} \DE(\omega_{ij}|\lambda_{ij}) \prod_{i=1}^{p} \EXP (\omega_{ii} | \lambda_{ii} / 2) \cdot 1_{\boldsymbol{\Omega}\in M^+}\\
+		LOH
+\end{align}
+
+Informative priors \citep{peterson2013}
+
+\section{Methods}
+\subsection{Apriori metabolic knowledge as informative priors}
+The Reactome Knowledgebase \citep{croft2014,fabregat2016} is an ordered network model of metabolism organized into pathways that are open source, curated, and peer reviewed. Pathways included in Reactome may contain multiple layers of sub-pathways which are fundamentally sets of linked reactions. Reactions, as a data structure in Reactome, may poses input, output, and catalytic physical entities. Biological process events, such as passive diffusion across a membrane, while not explicitly biochemical reactions are conceptualized similarly. The database version utilized in the current work (version 61, June 2017) contained 10,684 human protein coding genes (counting isoforms) and 1,701 small molecule intermediates. 
+
+Shortest path distance between biological entities was determined via the Breadth First Search (BFS) algorithm \cite{russell2010}. Briefly, to determine the shortest path between an initial and a goal vertex the search first explores vertices reachable via a single edge path from the initial vertex. If the goal vertex is found in this first iteration, the search ceases and returns the first encountered path from the initial to goal vertex encountered. If not found, the BFS algorithm then explores vertices reachable by a path of length 2. The search continues by incrementing the path length by one edge until the goal vertex is reached, and the first encountered path between the initial and goal vertex is returned. In the case that a path was found between an initial and final vertex, the length of this path was recorded as the distance between vertices. The Reactome data model does not differentiate input and output components of biochemical reactions based on whether an entity is a cofactor or not. Consequently, the presence of cofactors such as NADH with high degree result in a dense network in which the path distance between any pair of compounds is minimal. Consequently, cofactor vertices with high degree were removed from the network prior to Breadth First Search.
+\subsection{Posterior inference of model parameters}
+
+\subsection{Evaluation by simulation studies}
+In order to 
+
+\subsection{Plasma interactome for coronary artery disease (CAD)}
+
+\section{Results}
+
+\subsection{Simulation studies}
+
+\subsection{Plasma interactome for coronary artery disease (CAD)}
+
+\section{Discussion}
+
+\bibliographystyle{apa}
+\bibliography{../../DissBib}
+\nocite{*}
+
+\end{document}
