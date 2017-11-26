@@ -50,10 +50,8 @@ load("sdfs.RData")
 
 # Concatenate sdfs:
 sdfSet<-sdfs[[1]]
-for(i in 2:length(sdfs))
-{
-  if(!is.null(sdfs[[i]]))
-  {
+for(i in 2:length(sdfs)){
+  if(!is.null(sdfs[[i]])){
     sdfSet<-c(sdfSet,sdfs[[i]])
   }
 }
