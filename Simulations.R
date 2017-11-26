@@ -1,4 +1,7 @@
 ########### Prereqs ###########
+options(stringsAsFactors=FALSE)
+oldPar<-par()
+
 library(MASS)
 library(dplyr)
 library(tidyr)
@@ -37,6 +40,19 @@ sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
 set.seed(3)
 x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=sig)
 
+# Concentration matrix graph:
+Om1<-omega
+gOm1<-graph_from_adjacency_matrix(abs(Om1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gOm1)$width<-(E(gOm1)$weight**2)/4
+Om1[lower.tri(Om1,diag=TRUE)]<-NA
+E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
+
+png(file="Om1.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
+set.seed(2)
+plot(gOm1)
+dev.off()
+
 ########### Regular BGL Test ############
 BGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
             lambdaPriorb=1/10)
@@ -54,10 +70,17 @@ errBGL1<-omega-medBGL1
 gBGL1<-graph_from_adjacency_matrix(abs(medBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gBGL1)$width<-(E(gBGL1)$weight**2)/4
 medBGL1[lower.tri(medBGL1,diag=TRUE)]<-NA
-na.omit(c(medBGL1))
 E(gBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medBGL1)))>0)+1L]
 plot(gBGL1)
 
+# Export plot
+png(file="gBGL1.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
+set.seed(3)
+plot(gBGL1)
+dev.off()
+
+# Adaptive with small gamma t
 aBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="norm",
                    gammaPriors=10**(-2),gammaPriort=10**(-1))
 pIaBGL1<-posteriorInference(aBGL1)
@@ -65,10 +88,10 @@ medaBGL1<-pIaBGL1$posteriorMedian
 gaBGL1<-graph_from_adjacency_matrix(abs(medaBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gaBGL1)$width<-(E(gaBGL1)$weight**2)/4
 medaBGL1[lower.tri(medaBGL1,diag=TRUE)]<-NA
-na.omit(c(medaBGL1))
 E(gaBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL1)))>0)+1L]
 plot(gaBGL1)
 
+# Adaptive with large gamma t
 aBGL2<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="norm",
                    gammaPriors=10**(-2),gammaPriort=10**(1))
 pIaBGL2<-posteriorInference(aBGL2)
@@ -76,7 +99,6 @@ medaBGL2<-pIaBGL2$posteriorMedian
 gaBGL2<-graph_from_adjacency_matrix(abs(medaBGL2),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gaBGL2)$width<-(E(gaBGL2)$weight**2)/4
 medaBGL2[lower.tri(medaBGL2,diag=TRUE)]<-NA
-na.omit(c(medaBGL2))
 E(gaBGL2)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL2)))>0)+1L]
 plot(gaBGL2)
 
@@ -85,3 +107,28 @@ df1<-rbind(data.frame(pen="large",value=c(medaBGL2)),
 ggplot(df1,aes(x=pen,y=value,fill=pen))+geom_boxplot()+theme_bw()
 
 ########### Informative adaptive simulations ############
+aiBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="priorHyper",
+                   priorHyper=(sim)**30,gammaPriors=10**(-2),gammaPriort=10**(-1))
+
+pIaiBGL1<-posteriorInference(aiBGL1)
+medaiBGL1<-pIaiBGL1$posteriorMedian
+gaiBGL1<-graph_from_adjacency_matrix(abs(medaiBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)/4
+medaiBGL1[lower.tri(medaiBGL1,diag=TRUE)]<-NA
+E(gaiBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaiBGL1)))>0)+1L]
+
+png(file="gaiBGL1.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
+set.seed(3)
+plot(gaiBGL1)
+dev.off()
+
+png(file="OmAll.png",height=4,width=12,units="in",res=300)
+par(oma=c(1,1,1,1),mar=c(0,0,0,0),mfrow=c(1,3))
+set.seed(2)
+plot(gOm1)
+set.seed(3)
+plot(gBGL1)
+set.seed(3)
+plot(gaiBGL1)
+dev.off()
