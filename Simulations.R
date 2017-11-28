@@ -5,11 +5,32 @@ oldPar<-par()
 library(MASS)
 library(dplyr)
 library(tidyr)
-library(BayesianGLasso)
 library(igraph)
 library(ggplot2)
 
+source("~/gdrive/Dissertation/Aim2/BayesianGLasso/R/blockGLasso.default.R")
+source("~/gdrive/Dissertation/Aim2/BayesianGLasso/R/blockAdGLasso.default.R")
+
 setwd("~/gdrive/Dissertation/Aim2")
+
+########### Lambda analysis ############
+s<-.1
+
+fun1<-function(dis,omega,x){
+  return((1+dis)/(s+omega))
+}
+df1<-expand.grid(dis=seq(0,1,.2),omega=seq(0,1,.01))
+df1$lambda<-NA
+
+for(i in 1:nrow(df1)){
+  df1$lambda[i]<-fun1(dis=df1$dis[i],omega=df1$omega[i])
+}
+
+df1$dis<-factor(df1$dis)
+ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
+  xlab(expression(paste("|",omega[italic("ij")],"|")))+
+  ylab(expression(paste(E(lambda[italic("ij")]))))+
+  scale_color_discrete(name="Tanimoto\nDissimilarity")
 
 ########### Simulated data ###########
 nRV<-15L
@@ -47,11 +68,11 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-png(file="Om1.png",height=5,width=5,units="in",res=300)
+# png(file="Om1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-dev.off()
+# dev.off()
 
 ########### Regular BGL Test ############
 BGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
@@ -74,11 +95,11 @@ E(gBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medBGL1)))>0)+1L]
 plot(gBGL1)
 
 # Export plot
-png(file="gBGL1.png",height=5,width=5,units="in",res=300)
+# png(file="gBGL1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(3)
 plot(gBGL1)
-dev.off()
+# dev.off()
 
 # Adaptive with small gamma t
 aBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="norm",
@@ -117,13 +138,13 @@ E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)/4
 medaiBGL1[lower.tri(medaiBGL1,diag=TRUE)]<-NA
 E(gaiBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaiBGL1)))>0)+1L]
 
-png(file="gaiBGL1.png",height=5,width=5,units="in",res=300)
+# png(file="gaiBGL1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(3)
 plot(gaiBGL1)
-dev.off()
+# dev.off()
 
-png(file="OmAll.png",height=4,width=12,units="in",res=300)
+# png(file="OmAll.png",height=4,width=12,units="in",res=300)
 par(oma=c(1,1,1,1),mar=c(0,0,0,0),mfrow=c(1,3))
 set.seed(2)
 plot(gOm1)
@@ -131,4 +152,4 @@ set.seed(3)
 plot(gBGL1)
 set.seed(3)
 plot(gaiBGL1)
-dev.off()
+# dev.off()
