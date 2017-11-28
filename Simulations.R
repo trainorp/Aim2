@@ -27,10 +27,13 @@ for(i in 1:nrow(df1)){
 }
 
 df1$dis<-factor(df1$dis)
+
+# png(filename="lambdasVsSim.png",width=4.5,height=3,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
-  xlab(expression(paste("|",omega[italic("ij")],"|")))+
-  ylab(expression(paste(E(lambda[italic("ij")]))))+
+  xlab(expression(paste("|",tilde(omega)[ij],"|")))+
+  ylab(expression(paste(E(lambda["ij"]))))+
   scale_color_discrete(name="Tanimoto\nDissimilarity")
+# dev.off()
 
 ########### Simulated data ###########
 nRV<-15L
