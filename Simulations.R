@@ -77,6 +77,17 @@ set.seed(2)
 plot(gOm1)
 # dev.off()
 
+# Correlation adjacency plot:
+gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gCor)$width<-(E(gCor)$weight**2)
+E(gCor)$color<-"darkred"
+
+# png(file="gCor.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
+set.seed(32)
+plot(gCor)
+# dev.off()
+
 ########### Regular BGL Test ############
 BGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
             lambdaPriorb=1/10)
