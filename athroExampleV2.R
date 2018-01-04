@@ -65,39 +65,56 @@ for(i in 1:nrow(apSim)){
     apSim[i,j]<-cmp.similarity(apSet[i],apSet[j]) 
   }
 }
-
-distForPlot<-1-apSim
-rownames(distForPlot)<-apAnnoDf$biochemical[match(rownames(distForPlot),apAnnoDf$cmp)]
-colnames(distForPlot)<-apAnnoDf$biochemical[match(colnames(distForPlot),apAnnoDf$cmp)]
+apSimDf<-expand.grid(cmp1=rownames(apSim),cmp2=colnames(apSim),
+                     stringsAsFactors=FALSE)
+for(i in 1:nrow(apSimDf)){
+  apSimDf$sim[i]<-apSim[apSimDf$cmp1[i],apSimDf$cmp2[i]]
+}
 
 # See heatmap3.R for making heatmap with distForPlot
+rm(i,j,pubChems,Sdfs,sdfs,spec,apSet)
+
+############ Abundance data ############
+df1<-read.csv("~/gdrive/AthroMetab/Data/scaled.csv")
+rownames(df1)<-paste(df1$group,df1$timepoint,df1$ptid,sep="_")
+
+# Follow-up and with annotation only:
+df1<-df1[df1$timepoint=="TF-U",]
+m1<-as.matrix(df1[,!names(df1) %in% c("group","timepoint","ptid")])
+m1<-scale(m1,center=TRUE,scale=FALSE)
+
+# Entropy filter:
+m1<-m1[,apply(m1,2,function(x) length(unique(x))>19)]
+
+# [Temporary] filter for those without structural information:
+m1<-m1[,colnames(m1) %in% include]
+# Random sample:
+set.seed(3)
+idk<-blockGLasso(m1[,sample(1:ncol(m1),size=200)],iterations=25,burnIn=0)
+idk2<-posteriorInference(idk)
+idk3<-idk2$posteriorMedian
+idk4<-idk3
+# Partial correlations
+for(j in 1:ncol(idk4))
+{
+  for(i in 1:nrow(idk4))
+  {
+    idk4[i,j]<-(-idk3[i,j] / sqrt(idk3[i,i]*idk3[j,j]))
+  }
+}
 
 
-# ############ Abundance data ############
-# df1<-read.csv("~/gdrive/AthroMetab/Data/scaled.csv")
-# rownames(df1)<-paste(df1$group,df1$timepoint,df1$ptid,sep="_")
-# 
-# # Follow-up and with annotation only:
-# df1<-df1[df1$timepoint=="TF-U",]
-# m1<-as.matrix(df1[,!names(df1) %in% c("group","timepoint","ptid")])
-# m1<-scale(m1,center=TRUE,scale=FALSE)
-# 
-# # Entropy filter:
-# m1<-m1[,apply(m1,2,function(x) length(unique(x))>19)]
-# 
-# #save(m1,file="~/gdrive/Dissertation/Aim2/m1.RData")
-# 
-# # Make prior info matrix:
-# priorHyper=matrix(1e-6,ncol=ncol(dists),nrow=nrow(dists))
-# colnames(priorHyper)<-rownames(priorHyper)<-colnames(dists)
-# for(i in 1:nrow(dists))
-# {
-#   for(j in 1:ncol(dists))
-#   {
-#     priorHyper[i,j]<-priorHyper[i,j]*dists[i,j]
-#   }
-# }
-# 
+# Make prior info matrix:
+priorHyper=matrix(1e-6,ncol=ncol(dists),nrow=nrow(dists))
+colnames(priorHyper)<-rownames(priorHyper)<-colnames(dists)
+for(i in 1:nrow(dists))
+{
+  for(j in 1:ncol(dists))
+  {
+    priorHyper[i,j]<-priorHyper[i,j]*dists[i,j]
+  }
+}
+
 # priorHyper2<-matrix(NA,ncol=ncol(m1),nrow=ncol(m1))
 # colnames(priorHyper2)<-rownames(priorHyper2)<-colnames(m1)
 # # Fix prior info matrix to have same cols as m1
