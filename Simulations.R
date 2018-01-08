@@ -1,39 +1,34 @@
 ########### Prereqs ###########
-options(stringsAsFactors=FALSE)
-oldPar<-par()
-
 library(MASS)
 library(dplyr)
 library(tidyr)
 library(igraph)
 library(ggplot2)
+library(BayesianGLasso)
 
-source("~/gdrive/Dissertation/Aim2/BayesianGLasso/R/blockGLasso.default.R")
-source("~/gdrive/Dissertation/Aim2/BayesianGLasso/R/blockAdGLasso.default.R")
-
+options(stringsAsFactors=FALSE)
+oldPar<-par()
 setwd("~/gdrive/Dissertation/Aim2")
 
 ########### Lambda analysis ############
-s<-.1
-
-fun1<-function(dis,omega,x){
-  return((1+dis)/(s+omega))
+fun1<-function(r,s,dis,omega,x){
+  return((1+r)/(s+omega+dis))
 }
-df1<-expand.grid(dis=seq(0,1,.2),omega=seq(0,1,.01))
+df1<-expand.grid(dis=seq(0.1,1,.1),omega=seq(0,1,.01))
 df1$lambda<-NA
 
 for(i in 1:nrow(df1)){
-  df1$lambda[i]<-fun1(dis=df1$dis[i],omega=df1$omega[i])
+  df1$lambda[i]<-fun1(r=1,s=.1,dis=df1$dis[i],omega=df1$omega[i])
 }
 
 df1$dis<-factor(df1$dis)
 
-# png(filename="lambdasVsSim.png",width=4.5,height=3,units="in",res=600)
+png(filename="lambdasVsSim.png",width=4.5,height=3,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
-  scale_color_discrete(name="Tanimoto\nDissimilarity")
-# dev.off()
+  scale_color_discrete(name="Tanimoto\nSimilarity")
+dev.off()
 
 ########### Simulated data ###########
 nRV<-15L
