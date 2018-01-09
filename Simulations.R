@@ -27,7 +27,7 @@ png(filename="lambdasVsSim.png",width=4.5,height=3,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
-  scale_color_discrete(name="Tanimoto\nSimilarity")
+  scale_color_discrete(name="Similarity")
 dev.off()
 
 ########### Simulated data ###########
@@ -66,22 +66,22 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-# png(file="Om1.png",height=5,width=5,units="in",res=300)
+png(file="Om1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-# dev.off()
+dev.off()
 
 # Correlation adjacency plot:
 gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
-# png(file="gCor.png",height=5,width=5,units="in",res=300)
+png(file="gCor.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(32)
 plot(gCor)
-# dev.off()
+dev.off()
 
 ########### Regular BGL Test ############
 BGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
@@ -104,11 +104,11 @@ E(gBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medBGL1)))>0)+1L]
 plot(gBGL1)
 
 # Export plot
-# png(file="gBGL1.png",height=5,width=5,units="in",res=300)
+png(file="gBGL1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(3)
 plot(gBGL1)
-# dev.off()
+dev.off()
 
 # Adaptive with small gamma t
 aBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="norm",
@@ -132,14 +132,23 @@ medaBGL2[lower.tri(medaBGL2,diag=TRUE)]<-NA
 E(gaBGL2)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL2)))>0)+1L]
 plot(gaBGL2)
 
-df1<-rbind(data.frame(pen="large",value=c(medaBGL2)),
-           data.frame(pen="small",value=c(medaBGL1)))
-ggplot(df1,aes(x=pen,y=value,fill=pen))+geom_boxplot()+theme_bw()
-
 ########### Informative adaptive simulations ############
 aiBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="priorHyper",
-                   priorHyper=(sim)**30,gammaPriors=10**(-2),gammaPriort=10**(-1))
+                   priorHyper=sim,gammaPriors=10**(-2),gammaPriort=10**(-1))
 
+# Analysis of distribution for lambda
+gammaPriors=10**(-3)
+gammaPriort=10**(-1)
+curOmega<-aiBGL1$Omegas[[1000]]
+hyperSim<-4*sim**6
+curOmega<-abs(curOmega) + gammaPriort
+curOmega<-curOmega + hyperSim
+lambdas<-apply(curOmega,c(1,2),function(x) rgamma(1,1+gammaPriors,x))
+diag(lambdas)<-NA
+diag(hyperSim)<-NA
+plot(1-sim,lambdas)
+
+# Make plot:
 pIaiBGL1<-posteriorInference(aiBGL1)
 medaiBGL1<-pIaiBGL1$posteriorMedian
 gaiBGL1<-graph_from_adjacency_matrix(abs(medaiBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
