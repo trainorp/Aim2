@@ -134,19 +134,14 @@ plot(gaBGL2)
 
 ########### Informative adaptive simulations ############
 aiBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="priorHyper",
-                   priorHyper=sim,gammaPriors=10**(-2),gammaPriort=10**(-1))
+                   priorHyper=20*(sim)**10,gammaPriors=10**(1),gammaPriort=10**(-1))
 
 # Analysis of distribution for lambda
-gammaPriors=10**(-3)
-gammaPriort=10**(-1)
-curOmega<-aiBGL1$Omegas[[1000]]
-hyperSim<-4*sim**6
-curOmega<-abs(curOmega) + gammaPriort
-curOmega<-curOmega + hyperSim
-lambdas<-apply(curOmega,c(1,2),function(x) rgamma(1,1+gammaPriors,x))
-diag(lambdas)<-NA
-diag(hyperSim)<-NA
-plot(1-sim,lambdas)
+exOmegas<-aiBGL1$Omegas[[999]]
+exLambdas<-aiBGL1$lambdas[[999]]
+plot(c(exLambdas)~c(sim))
+mean(exLambdas[exLambdas>0])
+abline(lm(c(exLambdas)~c(sim)))
 
 # Make plot:
 pIaiBGL1<-posteriorInference(aiBGL1)
