@@ -84,17 +84,17 @@ plot(gCor)
 dev.off()
 
 ########### Regular BGL Test ############
-BGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
-            lambdaPriorb=1/10)
+BGL1<-blockGLasso(x1,iterations=10000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
+            lambdaPriorb=1/100)
 
 # Posterior inference object:
 pIBGL1<-posteriorInference(BGL1)
 
 # Posterior median:
 medBGL1<-pIBGL1$posteriorMedian
+medBGL1Sigma<-solve(medBGL1)
 
-# Signed absolute error:
-errBGL1<-omega-medBGL1
+hist(sapply(BGL1$Omegas,function(x) mean(abs(omega-x))))
 
 # Graph:
 gBGL1<-graph_from_adjacency_matrix(abs(medBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
@@ -115,6 +115,8 @@ aBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="nor
                    gammaPriors=10**(-2),gammaPriort=10**(-1))
 pIaBGL1<-posteriorInference(aBGL1)
 medaBGL1<-pIaBGL1$posteriorMedian
+hist(sapply(aBGL1$Omegas,function(x) mean(abs(omega-x))))
+
 gaBGL1<-graph_from_adjacency_matrix(abs(medaBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gaBGL1)$width<-(E(gaBGL1)$weight**2)/4
 medaBGL1[lower.tri(medaBGL1,diag=TRUE)]<-NA
