@@ -23,7 +23,7 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-png(filename="lambdasVsSim.png",width=4.5,height=3,units="in",res=600)
+png(filename="lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
@@ -84,17 +84,46 @@ plot(gCor)
 dev.off()
 
 ########### Regular BGL Test ############
-BGL1<-blockGLasso(x1,iterations=10000,burnIn=500,adaptive=FALSE,lambdaPriora=1,
-            lambdaPriorb=1/100)
+BGLres<-data.frame()
+BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,302),lambdaPriorb=10**(seq(-2,2,by=.5)))
+for(i in 1:nrow(BGLgrid)){
+  iterations<-10000
+  burnIn<-1000
+  lambdaPriora<-BGLgrid$lambdaPriora[i]
+  lambdaPriorb<-BGLgrid$lambdaPriorb[i]
+  BGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=FALSE,
+                    lambdaPriora=lambdaPriora,lambdaPriorb=1/lambdaPriorb)
+  
+  # Posterior inference object:
+  pIBGL1<-posteriorInference(BGL1)
+  
+  # Posterior median:
+  medBGL1<-pIBGL1$posteriorMedian
+  medBGL1Sigma<-solve(medBGL1)
+  
+  BGL1Errs<-data.frame(var="err",
+                       val=sapply(BGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
+  BGL1Lambdas<-data.frame(var="lambdas",val=BGL1$lambdas[(burnIn+1):(burnIn+iterations)])
+  BGL1res<-rbind(BGL1Errs,BGL1Lambdas)
+  BGL1res$lambdaPriora<-lambdaPriora
+  BGL1res$lambdaPriorb<-lambdaPriorb
+  BGLres<-rbind(BGLres,BGL1res)
+}
 
-# Posterior inference object:
-pIBGL1<-posteriorInference(BGL1)
+# Boxplot of error as a function of lambda priors
+BGLres$lambdaPriora<-factor(BGLres$lambdaPriora)
+BGLres$lambdaPriorb<-factor(BGLres$lambdaPriorb)
+ggplot(BGLres %>% filter(var=="err"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
+  geom_boxplot()+ylab("Error")+theme_bw()
 
-# Posterior median:
-medBGL1<-pIBGL1$posteriorMedian
-medBGL1Sigma<-solve(medBGL1)
+# Lambda as a function of priors:
+ggplot(BGLres %>% filter(var=="lambdas"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
+  geom_boxplot()+ylab("Lambda")+theme_bw()
 
-hist(sapply(BGL1$Omegas,function(x) mean(abs(omega-x))))
+# Lambda versus error:
+BGLresSum<-BGLres %>% group_by(var,lambdaPriora,lambdaPriorb) %>% summarise(val=median(val))
+BGLresSum<-BGLresSum %>% spread(key=var,value=val)
+ggplot(BGLresSum,aes(x=lambdas,y=err))+geom_point()+theme_bw()
 
 # Graph:
 gBGL1<-graph_from_adjacency_matrix(abs(medBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
