@@ -1,9 +1,8 @@
 ########### Prereqs ###########
 library(MASS)
-library(dplyr)
-library(tidyr)
+library(tidyverse)
 library(igraph)
-library(ggplot2)
+library(clusterGeneration)
 library(BayesianGLasso)
 
 options(stringsAsFactors=FALSE)
@@ -30,7 +29,7 @@ ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw(
   scale_color_discrete(name="Similarity")
 dev.off()
 
-########### Simulated data ###########
+########### Simulated AR(1) data ###########
 nRV<-15L
 nObs<-10L
 topParam<-.9
@@ -83,9 +82,24 @@ set.seed(32)
 plot(gCor)
 dev.off()
 
-########### Regular BGL Test ############
+########### Simulate Random multivariate Gaussian (c-vines) ############
+set.seed(33)
+sigR<-genPositiveDefMat(15,covMethod="c-vine")$Sigma
+omegaR<-solve(sigR)
+pCorFun(omegaR)
+
+# Plot as graph:
+Om1R<-omegaR
+gOm1R<-graph_from_adjacency_matrix(abs(Om1R),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gOm1R)$width<-(E(gOm1R)$weight**2)/4
+Om1R[lower.tri(Om1R,diag=TRUE)]<-NA
+E(gOm1R)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1R)))>0)+1L]
+set.seed(36)
+plot(gOm1R)
+
+########### Regular BGL Test (AR1) ############
 BGLres<-data.frame()
-BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,302),lambdaPriorb=10**(seq(-2,2,by=.5)))
+BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,32),lambdaPriorb=10**(seq(-2,2,by=.5)))
 for(i in 1:nrow(BGLgrid)){
   iterations<-10000
   burnIn<-1000
@@ -117,6 +131,8 @@ ggplot(BGLres %>% filter(var=="err"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora)
   geom_boxplot()+ylab("Error")+theme_bw()
 
 # Lambda as a function of priors:
+idk<-BGLres %>% filter(lambdaPriora==1) %>% filter(var=="lambdas") %>% select(-var,-lambdaPriora)
+boxplot(val~lambdaPriorb,data=idk)
 ggplot(BGLres %>% filter(var=="lambdas"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
   geom_boxplot()+ylab("Lambda")+theme_bw()
 
@@ -139,6 +155,9 @@ set.seed(3)
 plot(gBGL1)
 dev.off()
 
+########### Regular BGL Test (D-vines) ############
+
+########### Adaptive BGL Test (AR1) ############
 # Adaptive with small gamma t
 aBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="norm",
                    gammaPriors=10**(-2),gammaPriort=10**(-1))
