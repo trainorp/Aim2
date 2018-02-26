@@ -99,14 +99,14 @@ plot(gOm1R)
 
 ########### Regular BGL Test (AR1) ############
 BGLres<-data.frame()
-BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,32),lambdaPriorb=10**(seq(-2,2,by=.5)))
+BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,16),lambdaPriorb=10**(seq(-1,2,by=.5)))
 for(i in 1:nrow(BGLgrid)){
   iterations<-10000
   burnIn<-1000
   lambdaPriora<-BGLgrid$lambdaPriora[i]
   lambdaPriorb<-BGLgrid$lambdaPriorb[i]
   BGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=FALSE,
-                    lambdaPriora=lambdaPriora,lambdaPriorb=1/lambdaPriorb)
+                    lambdaPriora=lambdaPriora,lambdaPriorb=lambdaPriorb)
   
   # Posterior inference object:
   pIBGL1<-posteriorInference(BGL1)
@@ -131,8 +131,6 @@ ggplot(BGLres %>% filter(var=="err"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora)
   geom_boxplot()+ylab("Error")+theme_bw()
 
 # Lambda as a function of priors:
-idk<-BGLres %>% filter(lambdaPriora==1) %>% filter(var=="lambdas") %>% select(-var,-lambdaPriora)
-boxplot(val~lambdaPriorb,data=idk)
 ggplot(BGLres %>% filter(var=="lambdas"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
   geom_boxplot()+ylab("Lambda")+theme_bw()
 
