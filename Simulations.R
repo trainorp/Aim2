@@ -157,7 +157,7 @@ set.seed(3)
 plot(gBGL1)
 dev.off()
 
-########### Adaptive BGL Test (AR1) ############
+########### Adaptive BGL Test (AR1) Noninformative ############
 BGLres<-data.frame()
 BGLgrid<-expand.grid(gammaPriors=10**seq(-2,1.5,.5),gammaPriort=10**(seq(-3,0,by=.5)))
 iterations<-10000
@@ -207,41 +207,55 @@ medaBGL1[lower.tri(medaBGL1,diag=TRUE)]<-NA
 E(gaBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL1)))>0)+1L]
 plot(gaBGL1)
 
-# LOH add informative adaptive simulations
+########### Adaptive BGL Test (AR1) Informative ############
+BGLres<-data.frame()
+BGLgrid<-expand.grid(gammaPriors=10**seq(-2,1.5,.5),gammaPriort=10**(seq(-3,0,by=.5)))
+iterations<-1000
+burnIn<-100
+priorHyper<-abs(solve(sim))+1
+for(i in 1:nrow(BGLgrid)){
+  aBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
+                     adaptiveType="priorHyper",priorHyper=abs(solve(sim)),
+                     gammaPriors=BGLgrid$gammaPriors[i],gammaPriort=BGLgrid$gammaPriort[i])
+  
+  # Posterior inference object:
+  pIaBGL1<-posteriorInference(aBGL1)
+  
+  # Posterior median:
+  medaBGL1<-pIaBGL1$posteriorMedian
+  medaBGL1Sigma<-solve(medaBGL1)
+  
+  aBGL1Errs<-data.frame(var="err",
+                        val=sapply(aBGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
+  lambdaMatList<-aBGL1$lambdas[(burnIn+1):(burnIn+iterations)]
+  aBGL1Lambdas<-data.frame(var="lambdas",val=sapply(lambdaMatList,function(x) median(x[x>0])))
+  aBGL1res<-rbind(aBGL1Errs,aBGL1Lambdas)
+  aBGL1res$gammaPriors<-BGLgrid$gammaPriors[i]
+  aBGL1res$gammaPriort<-BGLgrid$gammaPriort[i]
+  BGLres<-rbind(BGLres,aBGL1res)
+}
 
-########### Regular BGL Test (D-vines) ############
+# Boxplot of error as a function of priors
+BGLres$gammaPriors<-factor(BGLres$gammaPriors)
+BGLres$gammaPriort<-factor(BGLres$gammaPriort)
+ggplot(BGLres %>% filter(var=="err"),aes(x=gammaPriors,y=val,fill=gammaPriort))+
+  geom_boxplot()+ylab("Error")+theme_bw()
 
-########### Informative adaptive simulations ############
-aiBGL1<-blockGLasso(x1,iterations=1000,burnIn=500,adaptive=TRUE,adaptiveType="priorHyper",
-                   priorHyper=20*(sim)**10,gammaPriors=10**(1),gammaPriort=10**(-1))
+# Lambda as a function of priors:
+ggplot(BGLres %>% filter(var=="lambdas"),aes(x=gammaPriors,y=log(val),fill=gammaPriort))+
+  geom_boxplot()+ylab("Lambda")+theme_bw()
 
-# Analysis of distribution for lambda
-exOmegas<-aiBGL1$Omegas[[999]]
-exLambdas<-aiBGL1$lambdas[[999]]
-plot(c(exLambdas)~c(sim))
-mean(exLambdas[exLambdas>0])
-abline(lm(c(exLambdas)~c(sim)))
+# Graph:
+aBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
+                   adaptiveType="priorHyper",priorHyper=priorHyper,
+                   gammaPriors=1,gammaPriort=.001)
 
-# Make plot:
-pIaiBGL1<-posteriorInference(aiBGL1)
-medaiBGL1<-pIaiBGL1$posteriorMedian
-gaiBGL1<-graph_from_adjacency_matrix(abs(medaiBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
-E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)/4
-medaiBGL1[lower.tri(medaiBGL1,diag=TRUE)]<-NA
-E(gaiBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaiBGL1)))>0)+1L]
+pIaBGL1<-posteriorInference(aBGL1)
+medaBGL1<-pIaBGL1$posteriorMedian
+medaBGL1Sigma<-solve(medaBGL1)
 
-# png(file="gaiBGL1.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
-set.seed(3)
-plot(gaiBGL1)
-# dev.off()
-
-# png(file="OmAll.png",height=4,width=12,units="in",res=300)
-par(oma=c(1,1,1,1),mar=c(0,0,0,0),mfrow=c(1,3))
-set.seed(2)
-plot(gOm1)
-set.seed(3)
-plot(gBGL1)
-set.seed(3)
-plot(gaiBGL1)
-# dev.off()
+gaBGL1<-graph_from_adjacency_matrix(abs(medaBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gaBGL1)$width<-(E(gaBGL1)$weight**2)
+medaBGL1[lower.tri(medaBGL1,diag=TRUE)]<-NA
+E(gaBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL1)))>0)+1L]
+plot(gaBGL1)
