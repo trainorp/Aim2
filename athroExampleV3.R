@@ -1,3 +1,4 @@
+########### Prereqs ###########
 options(stringsAsFactors=FALSE)
 library(MASS)
 library(BayesianGLasso)
@@ -5,6 +6,7 @@ library(tidyverse)
 
 setwd("~/gdrive/Dissertation/Aim2")
 
+## Begin don't run:
 ############ Untargeted data ############
 setwd("~/gdrive/AthroMetab/")
 spec<-read.csv("Data/AthroACSRawSpectra.csv")
@@ -22,8 +24,6 @@ for(i in 1:nrow(key)){
   }
 }
 
-include<-key$id[!grepl("Unknown",key$biochemical)]
-
 setwd("~/gdrive/Dissertation/Aim2")
 
 ############ Structural similarity ############
@@ -35,16 +35,16 @@ for(i in 1:nrow(sims)){
   simMat[match(sims$V1[i],rownames(simMat)),match(sims$V2[i],colnames(simMat))]<-sims$V3[i]
   print(i)
 }
-simMat2<-simMat
-rownames(simMat2)<-key$biochemical[match(rownames(simMat2),key$id)]
-colnames(simMat2)<-key$biochemical[match(colnames(simMat2),key$id)]
-
-source('~/gdrive/Dissertation/Aim2/heatmap3.R')
-# heatmap3(1-simMat2) # May need to go back and change the resolution
 
 ############ Abundance data ############
 df1<-read.csv("~/gdrive/AthroMetab/Data/scaled.csv")
 rownames(df1)<-paste(df1$group,df1$timepoint,df1$ptid,sep="_")
+rm(spec,i)
+save.image(file="atheroExampleV3Data.RData")
+## End don't run:
+
+# Import data:
+load(file="atheroExampleV3Data.RData")
 
 # Follow-up and with annotation only:
 df1<-df1[df1$timepoint=="TF-U",]
@@ -55,9 +55,44 @@ m1<-scale(m1,center=TRUE,scale=FALSE)
 m1<-m1[,apply(m1,2,function(x) length(unique(x))>19)]
 
 # Filter for those without structural information:
-m1<-m1[,colnames(m1) %in% include]
+m1<-m1[,colnames(m1) %in% colnames(simMat)]
 
-# Random sample:
+# Make sure column order / names match:
+simMat<-simMat[rownames(simMat) %in% colnames(m1),colnames(simMat) %in% colnames(m1)]
+
+########### Heatmap ###########
+simMat2<-simMat
+rownames(simMat2)<-key$biochemical[match(rownames(simMat2),key$id)]
+colnames(simMat2)<-key$biochemical[match(colnames(simMat2),key$id)]
+
+source('~/gdrive/Dissertation/Aim2/heatmap3.R')
+heatmap3(1-simMat2) # May need to go back and change the resolution
+
+########### Random sample: ###########
+# True partial correlations:
+pCorFun<-function(x){
+  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
+  for(j in 1:ncol(pcors)){
+    for(i in 1:nrow(pcors)){
+      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
+    }
+  }
+  return(pcors)
+}
+
 set.seed(3)
-idk<-blockGLasso(m1[,sample(1:ncol(m1),size=200)],iterations=25,burnIn=0)
+samp<-sample(1:ncol(m1),size=200)
+idk<-blockGLasso(m1[,samp],iterations=200,burnIn=0)
+idk2<-idk$Omegas[[200]]
+colnames(idk2)<-rownames(idk2)<-key$biochemical[match(colnames(m1)[samp],key$id)]
+idk3<-pCorFun(idk2)
+rownames(idk3)<-colnames(idk3)<-colnames(idk2)
 
+priorHyper<-simMat+.1
+colnames(m1) == colnames(priorHyper) # Yep
+aiBGL1<-blockGLasso(m1[,samp],iterations=100,burnIn=0,adaptive=TRUE,
+                    adaptiveType="priorHyper",priorHyper=priorHyper[samp,samp],
+                    gammaPriors=10,gammaPriort=.001)
+aiBGL2<-aiBGL1$Omegas[[100]]
+aiBGL3<-pCorFun(aiBGL2)
+colnames(aiBGL3)<-rownames(aiBGL3)<-key$biochemical[match(colnames(m1)[samp],key$id)]

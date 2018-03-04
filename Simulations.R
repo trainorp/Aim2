@@ -22,12 +22,12 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-png(filename="lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
+# png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
   scale_color_discrete(name="Similarity")
-dev.off()
+# dev.off()
 
 ########### Simulated AR(1) data ###########
 nRV<-15L
@@ -65,22 +65,22 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-png(file="Om1.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-dev.off()
+# dev.off()
 
 # Correlation adjacency plot:
 gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
-png(file="gCor.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(32)
 plot(gCor)
-dev.off()
+# dev.off()
 
 ########### Simulate Random multivariate Gaussian (c-vines) ############
 set.seed(33)
@@ -94,12 +94,12 @@ gOm1R<-graph_from_adjacency_matrix(abs(Om1R),mode="undirected",diag=FALSE,weight
 E(gOm1R)$width<-(E(gOm1R)$weight**2)/4
 Om1R[lower.tri(Om1R,diag=TRUE)]<-NA
 E(gOm1R)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1R)))>0)+1L]
-set.seed(36)
+set.seed(333)
 plot(gOm1R)
 
 ########### Regular BGL Test (AR1) ############
 BGLres<-data.frame()
-BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,16),lambdaPriorb=10**(seq(-1,2,by=.5)))
+BGLgrid<-expand.grid(lambdaPriora=c(1,2,4,8,16),lambdaPriorb=10**(seq(-2,2,by=1)))
 iterations<-10000
 burnIn<-1000
 for(i in 1:nrow(BGLgrid)){
@@ -125,17 +125,15 @@ for(i in 1:nrow(BGLgrid)){
 # Boxplot of error as a function of lambda priors
 BGLres$lambdaPriora<-factor(BGLres$lambdaPriora)
 BGLres$lambdaPriorb<-factor(BGLres$lambdaPriorb)
-ggplot(BGLres %>% filter(var=="err"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
-  geom_boxplot()+ylab("Error")+theme_bw()
+BGLres$Var<-factor(BGLres$var,levels=c("lambdas","err"),labels=c("lambda","`Mean Absolute Error`"))
 
-# Lambda as a function of priors:
-ggplot(BGLres %>% filter(var=="lambdas"),aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
-  geom_boxplot()+ylab("Lambda")+theme_bw()
-
-# Lambda versus error:
-BGLresSum<-BGLres %>% group_by(var,lambdaPriora,lambdaPriorb) %>% summarise(val=median(val))
-BGLresSum<-BGLresSum %>% spread(key=var,value=val)
-ggplot(BGLresSum,aes(x=lambdas,y=err))+geom_point()+theme_bw()
+# Boxplots of lambdas and Mean Absolute Error
+png(filename="Plots/AR1_LambdaError.png",height=4,width=7,units="in",res=300)
+ggplot(BGLres,aes(x=lambdaPriorb,y=val,fill=lambdaPriora))+
+  geom_boxplot()+xlab(expression(paste("Gamma hyperparameter ",italic(s))))+ylab("Value")+
+  scale_fill_discrete(name=expression(italic(r)))+theme_bw()+
+  facet_wrap(~Var,nrow=2,scale="free_y",labeller=label_parsed)
+dev.off()
 
 # Graph:
 BGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=FALSE,
@@ -151,7 +149,7 @@ E(gBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medBGL1)))>0)+1L]
 plot(gBGL1)
 
 # Export plot
-png(file="gBGL1.png",height=5,width=5,units="in",res=300)
+png(file="Plots/gBGL1.png",height=5,width=5,units="in",res=300)
 par(mar=c(1,1,1,1))
 set.seed(3)
 plot(gBGL1)
@@ -212,27 +210,27 @@ BGLres<-data.frame()
 BGLgrid<-expand.grid(gammaPriors=10**seq(-2,1.5,.5),gammaPriort=10**(seq(-3,0,by=.5)))
 iterations<-1000
 burnIn<-100
-priorHyper<-abs(solve(sim))+1
+priorHyper<-abs(solve(sim))+.1
 for(i in 1:nrow(BGLgrid)){
-  aBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
+  aiBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
                      adaptiveType="priorHyper",priorHyper=abs(solve(sim)),
                      gammaPriors=BGLgrid$gammaPriors[i],gammaPriort=BGLgrid$gammaPriort[i])
   
   # Posterior inference object:
-  pIaBGL1<-posteriorInference(aBGL1)
+  pIaiBGL1<-posteriorInference(aiBGL1)
   
   # Posterior median:
-  medaBGL1<-pIaBGL1$posteriorMedian
-  medaBGL1Sigma<-solve(medaBGL1)
+  medaiBGL1<-pIaiBGL1$posteriorMedian
+  medaiBGL1Sigma<-solve(medaiBGL1)
   
-  aBGL1Errs<-data.frame(var="err",
-                        val=sapply(aBGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
-  lambdaMatList<-aBGL1$lambdas[(burnIn+1):(burnIn+iterations)]
-  aBGL1Lambdas<-data.frame(var="lambdas",val=sapply(lambdaMatList,function(x) median(x[x>0])))
-  aBGL1res<-rbind(aBGL1Errs,aBGL1Lambdas)
-  aBGL1res$gammaPriors<-BGLgrid$gammaPriors[i]
-  aBGL1res$gammaPriort<-BGLgrid$gammaPriort[i]
-  BGLres<-rbind(BGLres,aBGL1res)
+  aiBGL1Errs<-data.frame(var="err",
+                        val=sapply(aiBGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
+  lambdaMatList<-aiBGL1$lambdas[(burnIn+1):(burnIn+iterations)]
+  aiBGL1Lambdas<-data.frame(var="lambdas",val=sapply(lambdaMatList,function(x) median(x[x>0])))
+  aiBGL1res<-rbind(aiBGL1Errs,aiBGL1Lambdas)
+  aiBGL1res$gammaPriors<-BGLgrid$gammaPriors[i]
+  aiBGL1res$gammaPriort<-BGLgrid$gammaPriort[i]
+  BGLres<-rbind(BGLres,aiBGL1res)
 }
 
 # Boxplot of error as a function of priors
@@ -246,16 +244,16 @@ ggplot(BGLres %>% filter(var=="lambdas"),aes(x=gammaPriors,y=log(val),fill=gamma
   geom_boxplot()+ylab("Lambda")+theme_bw()
 
 # Graph:
-aBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
+aiBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
                    adaptiveType="priorHyper",priorHyper=priorHyper,
                    gammaPriors=1,gammaPriort=.001)
 
-pIaBGL1<-posteriorInference(aBGL1)
-medaBGL1<-pIaBGL1$posteriorMedian
-medaBGL1Sigma<-solve(medaBGL1)
+pIaiBGL1<-posteriorInference(aiBGL1)
+medaiBGL1<-pIaiBGL1$posteriorMedian
+medaiBGL1Sigma<-solve(medaiBGL1)
 
-gaBGL1<-graph_from_adjacency_matrix(abs(medaBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
-E(gaBGL1)$width<-(E(gaBGL1)$weight**2)
-medaBGL1[lower.tri(medaBGL1,diag=TRUE)]<-NA
-E(gaBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaBGL1)))>0)+1L]
-plot(gaBGL1)
+gaiBGL1<-graph_from_adjacency_matrix(abs(medaiBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)
+medaiBGL1[lower.tri(medaiBGL1,diag=TRUE)]<-NA
+E(gaiBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaiBGL1)))>0)+1L]
+plot(gaiBGL1)
