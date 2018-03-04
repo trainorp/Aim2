@@ -104,7 +104,7 @@ iterations<-10000
 burnIn<-1000
 for(i in 1:nrow(BGLgrid)){
   BGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=FALSE,
-          gammaPriorr=BGLgrid$gammaPriorr[i],gammaPriors=BGLgrid$gammaPriors[i])
+          lambdaPriora=BGLgrid$gammaPriorr[i],lambdaPriorb=BGLgrid$gammaPriors[i])
   
   # Posterior inference object:
   pIBGL1<-posteriorInference(BGL1)
@@ -137,7 +137,7 @@ dev.off()
 
 # Graph:
 BGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=FALSE,
-                  gammaPriorr=16,gammaPriors=.01)
+                  lambdaPriora=16,lambdaPriorb=.01)
 pIBGL1<-posteriorInference(BGL1)
 medBGL1<-pIBGL1$posteriorMedian
 medBGL1Sigma<-solve(medBGL1)
