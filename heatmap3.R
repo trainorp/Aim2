@@ -1,4 +1,4 @@
-function (distForPlot, Rowv = NULL, Colv = NULL, 
+heatmap3<-function (distForPlot, Rowv = NULL, Colv = NULL, 
           distfun = dist, hclustfun = hclust, 
           reorderfun = function(d, w) reorder(d, w),
           symm = FALSE, revC = identical(Colv,"Rowv"), scale ="none", na.rm = TRUE, 
@@ -31,7 +31,7 @@ function (distForPlot, Rowv = NULL, Colv = NULL,
   lmat[is.na(lmat)] <- 0
 
   dev.off()
-  png(file="compSimClustWardD2b.png",height=12,width=12,units="in",res=1500)
+  png(file="MISimClustWardD2Color.png",height=12,width=12,units="in",res=600)
   dev.hold()
   on.exit(dev.flush())
   op <- par(no.readonly = TRUE)
@@ -57,10 +57,10 @@ function (distForPlot, Rowv = NULL, Colv = NULL,
     plot(ddc, axes = FALSE, xaxs = "i", leaflab = "none")
   dev.off()
   
-  png(file="compSimDend.png",height=10,width=12,units="in",res=600)
+  png(file="MIcompSimDendColor.png",height=10,width=12,units="in",res=300)
   plot(ddr,nodePar=list(pch=NA,cex=.5,lab.cex=.25))
   dev.off()
   
-  invisible(list(rowInd = rowInd, colInd = colInd, Rowv = if (keep.dendro && 
-                                                              doRdend) ddr, Colv = if (keep.dendro && doCdend) ddc))
+  # invisible(list(rowInd = rowInd, colInd = colInd, Rowv = if (keep.dendro && 
+  #                                                             doRdend) ddr, Colv = if (keep.dendro && doCdend) ddc))
 }
