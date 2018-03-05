@@ -66,6 +66,7 @@ rownames(simMat2)<-key$biochemical[match(rownames(simMat2),key$id)]
 colnames(simMat2)<-key$biochemical[match(colnames(simMat2),key$id)]
 
 source('~/gdrive/Dissertation/Aim2/heatmap3.R')
+dev.new()
 heatmap3(1-simMat2) # May need to go back and change the resolution
 
 ########### Random sample: ###########
@@ -90,9 +91,17 @@ rownames(idk3)<-colnames(idk3)<-colnames(idk2)
 
 priorHyper<-simMat+.1
 colnames(m1) == colnames(priorHyper) # Yep
-aiBGL1<-blockGLasso(m1[,samp],iterations=100,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1[,samp],iterations=10,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper[samp,samp],
                     gammaPriors=10,gammaPriort=.001)
-aiBGL2<-aiBGL1$Omegas[[100]]
+
+library(RhpcBLASctl)
+ptm<-proc.time()
+aiBGL1<-blockGLasso(m1,iterations=5,burnIn=0,adaptive=TRUE,
+                    adaptiveType="priorHyper",priorHyper=priorHyper,
+                    gammaPriors=40,gammaPriort=.001)
+proc.time()-ptm
+
+aiBGL2<-aiBGL1$Omegas[[10]]
 aiBGL3<-pCorFun(aiBGL2)
-colnames(aiBGL3)<-rownames(aiBGL3)<-key$biochemical[match(colnames(m1)[samp],key$id)]
+colnames(aiBGL3)<-rownames(aiBGL3)<-key$biochemical[match(colnames(m1),key$id)]
