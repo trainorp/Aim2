@@ -91,7 +91,7 @@ rownames(idk3)<-colnames(idk3)<-colnames(idk2)
 
 priorHyper<-simMat+.1
 colnames(m1) == colnames(priorHyper) # Yep
-aiBGL1<-blockGLasso(m1[,samp],iterations=10,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1[,samp],iterations=2,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper[samp,samp],
                     gammaPriors=10,gammaPriort=.001)
 
