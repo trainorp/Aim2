@@ -183,16 +183,6 @@ for(i in 1:nrow(BGLgrid)){
   medaBGL1<-pIaBGL1$posteriorMedian
   medaBGL1Sigma<-solve(medaBGL1)
   
-  # Topological error analysis: [LOH]
-  pCorsMedaBGL1<-pCorFun(medaBGL1)
-  pCorsIndMedaBGL1<-abs(pCorsaMedBGL1)>.1
-  tabaBGL1<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedaBGL1)))
-  BGLgrid$sens[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1['TRUE',])
-  BGLgrid$spec[i]<-tabBGL1['FALSE','FALSE']/sum(tabBGL1['FALSE',])
-  BGLgrid$ppv[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1[,'TRUE'])
-  BGLgrid$f1[i]<-(2*BGLgrid$sens[i]*BGLgrid$ppv[i])/(BGLgrid$sens[i]+BGLgrid$ppv[i])
-  
-  # Return:
   aBGL1Errs<-data.frame(var="err",
                        val=sapply(aBGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
   lambdaMatList<-aBGL1$lambdas[(burnIn+1):(burnIn+iterations)]
