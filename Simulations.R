@@ -22,12 +22,12 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
+# png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
   scale_color_discrete(name="Similarity")
-dev.off()
+# dev.off()
 
 ########### Simulated AR(1) data ###########
 nRV<-15L
@@ -66,22 +66,22 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-dev.off()
+# dev.off()
 
 # Correlation adjacency plot:
 gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
-png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(32)
 plot(gCor)
-dev.off()
+# dev.off()
 
 ########### Simulate Random multivariate Gaussian (c-vines) ############
 set.seed(33)
@@ -183,6 +183,16 @@ for(i in 1:nrow(BGLgrid)){
   medaBGL1<-pIaBGL1$posteriorMedian
   medaBGL1Sigma<-solve(medaBGL1)
   
+  # Topological error analysis: [LOH]
+  pCorsMedaBGL1<-pCorFun(medaBGL1)
+  pCorsIndMedaBGL1<-abs(pCorsaMedBGL1)>.1
+  tabaBGL1<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedaBGL1)))
+  BGLgrid$sens[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1['TRUE',])
+  BGLgrid$spec[i]<-tabBGL1['FALSE','FALSE']/sum(tabBGL1['FALSE',])
+  BGLgrid$ppv[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1[,'TRUE'])
+  BGLgrid$f1[i]<-(2*BGLgrid$sens[i]*BGLgrid$ppv[i])/(BGLgrid$sens[i]+BGLgrid$ppv[i])
+  
+  # Return:
   aBGL1Errs<-data.frame(var="err",
                        val=sapply(aBGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
   lambdaMatList<-aBGL1$lambdas[(burnIn+1):(burnIn+iterations)]
