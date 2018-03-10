@@ -49,7 +49,8 @@ pCorFun<-function(x){
   }
   return(pcors)
 }
-pCorFun(omega)
+pCors<-pCorFun(omega)
+pCorsInd<-abs(pCors)>.1
 
 # Simulated structural similarity:
 sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
@@ -100,6 +101,7 @@ plot(gOm1R)
 ########### Regular BGL Test (AR1) ############
 BGLres<-data.frame()
 BGLgrid<-expand.grid(gammaPriorr=c(1,2,4,8,16),gammaPriors=10**(seq(-2,2,by=1)))
+BGLgrid$f1<-BGLgrid$ppv<-BGLgrid$spec<-BGLgrid$sens<-NA
 iterations<-10000
 burnIn<-1000
 for(i in 1:nrow(BGLgrid)){
@@ -113,6 +115,16 @@ for(i in 1:nrow(BGLgrid)){
   medBGL1<-pIBGL1$posteriorMedian
   medBGL1Sigma<-solve(medBGL1)
   
+  # Topological error analysis:
+  pCorsMedBGL1<-pCorFun(medBGL1)
+  pCorsIndMedBGL1<-abs(pCorsMedBGL1)>.1
+  tabBGL1<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedBGL1)))
+  BGLgrid$sens[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1['TRUE',])
+  BGLgrid$spec[i]<-tabBGL1['FALSE','FALSE']/sum(tabBGL1['FALSE',])
+  BGLgrid$ppv[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1[,'TRUE'])
+  BGLgrid$f1[i]<-(2*BGLgrid$sens[i]*BGLgrid$ppv[i])/(BGLgrid$sens[i]+BGLgrid$ppv[i])
+  
+  # Return:
   BGL1Errs<-data.frame(var="err",
                        val=sapply(BGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
   BGL1Lambdas<-data.frame(var="lambdas",val=BGL1$lambdas[(burnIn+1):(burnIn+iterations)])
