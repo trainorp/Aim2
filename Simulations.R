@@ -22,12 +22,12 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
+# png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
   scale_color_discrete(name="Similarity")
-dev.off()
+# dev.off()
 
 ########### Simulated AR(1) data ###########
 nRV<-15L
@@ -49,7 +49,8 @@ pCorFun<-function(x){
   }
   return(pcors)
 }
-pCorFun(omega)
+pCors<-pCorFun(omega)
+pCorsInd<-abs(pCors)>.1
 
 # Simulated structural similarity:
 sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
@@ -65,22 +66,22 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-dev.off()
+# dev.off()
 
 # Correlation adjacency plot:
 gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
-png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+# png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
 set.seed(32)
 plot(gCor)
-dev.off()
+# dev.off()
 
 ########### Simulate Random multivariate Gaussian (c-vines) ############
 set.seed(33)
@@ -100,6 +101,7 @@ plot(gOm1R)
 ########### Regular BGL Test (AR1) ############
 BGLres<-data.frame()
 BGLgrid<-expand.grid(gammaPriorr=c(1,2,4,8,16),gammaPriors=10**(seq(-2,2,by=1)))
+BGLgrid$f1<-BGLgrid$ppv<-BGLgrid$spec<-BGLgrid$sens<-NA
 iterations<-10000
 burnIn<-1000
 for(i in 1:nrow(BGLgrid)){
@@ -113,6 +115,16 @@ for(i in 1:nrow(BGLgrid)){
   medBGL1<-pIBGL1$posteriorMedian
   medBGL1Sigma<-solve(medBGL1)
   
+  # Topological error analysis:
+  pCorsMedBGL1<-pCorFun(medBGL1)
+  pCorsIndMedBGL1<-abs(pCorsMedBGL1)>.1
+  tabBGL1<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedBGL1)))
+  BGLgrid$sens[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1['TRUE',])
+  BGLgrid$spec[i]<-tabBGL1['FALSE','FALSE']/sum(tabBGL1['FALSE',])
+  BGLgrid$ppv[i]<-tabBGL1['TRUE','TRUE']/sum(tabBGL1[,'TRUE'])
+  BGLgrid$f1[i]<-(2*BGLgrid$sens[i]*BGLgrid$ppv[i])/(BGLgrid$sens[i]+BGLgrid$ppv[i])
+  
+  # Return:
   BGL1Errs<-data.frame(var="err",
                        val=sapply(BGL1$Omegas,function(x) mean(abs(omega-x)))[(burnIn+1):(burnIn+iterations)])
   BGL1Lambdas<-data.frame(var="lambdas",val=BGL1$lambdas[(burnIn+1):(burnIn+iterations)])
