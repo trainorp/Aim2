@@ -29,6 +29,60 @@ ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw(
   scale_color_discrete(name="Similarity")
 # dev.off()
 
+########### Simulated AR(1) data ###########
+nRV<-15L
+nObs<-10L
+topParam<-.9
+topParamSim<-.975
+
+# AR(1) example
+sig<-toeplitz(topParam**(0:(nRV-1L))) # True covariance matrix
+omega<-solve(sig) # True concentration matrix
+
+# True partial correlations:
+pCorFun<-function(x){
+  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
+  for(j in 1:ncol(pcors)){
+    for(i in 1:nrow(pcors)){
+      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
+    }
+  }
+  return(pcors)
+}
+pCors<-pCorFun(omega)
+pCorsInd<-abs(pCors)>.1
+
+# Simulated structural similarity:
+sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
+
+# Simulated mv random normal:
+set.seed(3)
+x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=sig)
+
+# Concentration matrix graph:
+Om1<-omega
+gOm1<-graph_from_adjacency_matrix(abs(Om1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gOm1)$width<-(E(gOm1)$weight**2)/4
+Om1[lower.tri(Om1,diag=TRUE)]<-NA
+E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
+
+# png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
+set.seed(2)
+plot(gOm1)
+# dev.off()
+
+# Correlation adjacency plot:
+gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
+E(gCor)$width<-(E(gCor)$weight**2)
+E(gCor)$color<-"darkred"
+
+# png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
+# par(mar=c(1,1,1,1))
+set.seed(32)
+plot(gCor)
+# dev.off()
+
 ########### Simulation function ############
 simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by=.5)),
             adaptive=c(FALSE,TRUE),adaptiveType=c("norm","priorHyper"),

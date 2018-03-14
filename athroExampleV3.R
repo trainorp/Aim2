@@ -3,6 +3,7 @@ options(stringsAsFactors=FALSE)
 library(MASS)
 library(BayesianGLasso)
 library(tidyverse)
+library(igraph)
 
 setwd("~/gdrive/Dissertation/Aim2")
 
@@ -47,12 +48,12 @@ save.image(file="atheroExampleV3Data.RData")
 load(file="atheroExampleV3Data.RData")
 
 # Follow-up and with annotation only:
-df1<-df1[df1$timepoint=="TF-U",]
+df1<-df1[df1$timepoint=="TF-U" | (df1$group=="sCAD" & df1$timepoint=="T0"),]
 m1<-as.matrix(df1[,!names(df1) %in% c("group","timepoint","ptid")])
 m1<-scale(m1,center=TRUE,scale=FALSE)
 
 # Entropy filter:
-m1<-m1[,apply(m1,2,function(x) length(unique(x))>19)]
+m1<-m1[,apply(m1,2,function(x) length(unique(x))>28)]
 
 # Filter for those without structural information:
 m1<-m1[,colnames(m1) %in% colnames(simMat)]
@@ -69,8 +70,7 @@ source('~/gdrive/Dissertation/Aim2/heatmap3.R')
 dev.new()
 heatmap3(1-simMat2) # May need to go back and change the resolution
 
-########### Random sample: ###########
-# True partial correlations:
+########### Partial correlation Function ###########
 pCorFun<-function(x){
   pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
   for(j in 1:ncol(pcors)){
@@ -81,27 +81,49 @@ pCorFun<-function(x){
   return(pcors)
 }
 
+########### Random sample: ###########
 set.seed(3)
 samp<-sample(1:ncol(m1),size=200)
+
+# Regular BGL:
 idk<-blockGLasso(m1[,samp],iterations=200,burnIn=0)
 idk2<-idk$Omegas[[200]]
 colnames(idk2)<-rownames(idk2)<-key$biochemical[match(colnames(m1)[samp],key$id)]
 idk3<-pCorFun(idk2)
 rownames(idk3)<-colnames(idk3)<-colnames(idk2)
 
+# Structure Adaptive:
 priorHyper<-simMat+.1
 colnames(m1) == colnames(priorHyper) # Yep
+
+# Smaller sample:
 aiBGL1<-blockGLasso(m1[,samp],iterations=2,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper[samp,samp],
                     gammaPriors=10,gammaPriort=.001)
 
-library(RhpcBLASctl)
+########### Run the sampler: ###########
 ptm<-proc.time()
-aiBGL1<-blockGLasso(m1,iterations=5,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1,iterations=250,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
                     gammaPriors=40,gammaPriort=.001)
 proc.time()-ptm
+save(aiBGL1,file="aiBGL1.RData")
 
-aiBGL2<-aiBGL1$Omegas[[10]]
-aiBGL3<-pCorFun(aiBGL2)
-colnames(aiBGL3)<-rownames(aiBGL3)<-key$biochemical[match(colnames(m1),key$id)]
+########### Posterior Inference ###########
+load(file="aiBGL1.RData")
+pIaiBGL1<-posteriorInference(aiBGL1)
+aiBGL1Med<-pIaiBGL1$posteriorMedian
+aiBGL1Cor<-pCorFun(aiBGL1Med)
+colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
+
+########### Graph ###########
+aiBGL1MedGraph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",diag=FALSE,weighted=TRUE)
+E(aiBGL1MedGraph)$width<-(E(aiBGL1MedGraph)$weight**2)
+aiBGL1Med[lower.tri(aiBGL1Med,diag=TRUE)]<-NA
+E(aiBGL1MedGraph)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(aiBGL1Med)))>0)+1L]
+set.seed(2)
+plot(aiBGL1MedGraph)
+
+aiBGL1MedGraph<-delete_edges(aiBGL1MedGraph,which(E(aiBGL1MedGraph)$weight<0.001))
+idk<-as.data.frame(get.edgelist(aiBGL1MedGraph))
+plot(aiBGL1MedGraph)
