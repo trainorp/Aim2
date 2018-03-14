@@ -169,7 +169,7 @@ dev.off()
 
 ########### Adaptive BGL Test (AR1) Noninformative ############
 aBGLres<-data.frame()
-BGLgrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by=.5)))
+BGLgrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,1),gammaPriors=10**(seq(-3,0,by=1)))
 iterations<-10000
 burnIn<-1000
 for(i in 1:nrow(BGLgrid)){
@@ -216,9 +216,10 @@ plot(gaBGL1)
 ########### Adaptive BGL Test (AR1) Informative ############
 BGLres<-data.frame()
 BGLgrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by=.5)))
-iterations<-1000
-burnIn<-100
-priorHyper<-abs(solve(sim))+.1
+iterations<-10000
+burnIn<-1000
+priorHyper<-abs(4*solve(sim))+.01
+priorHyper<-4*(1-sim**4+.01)
 for(i in 1:nrow(BGLgrid)){
   aiBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
                      adaptiveType="priorHyper",priorHyper=abs(solve(sim)),
@@ -254,14 +255,14 @@ ggplot(BGLres %>% filter(var=="lambdas"),aes(x=gammaPriorr,y=log(val),fill=gamma
 # Graph:
 aiBGL1<-blockGLasso(x1,iterations=iterations,burnIn=burnIn,adaptive=TRUE,
                    adaptiveType="priorHyper",priorHyper=priorHyper,
-                   gammaPriorr=1,gammaPriors=.001)
+                   gammaPriorr=1,gammaPriors=.01)
 
 pIaiBGL1<-posteriorInference(aiBGL1)
 medaiBGL1<-pIaiBGL1$posteriorMedian
 medaiBGL1Sigma<-solve(medaiBGL1)
 
 gaiBGL1<-graph_from_adjacency_matrix(abs(medaiBGL1),mode="undirected",diag=FALSE,weighted=TRUE)
-E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)
+E(gaiBGL1)$width<-(E(gaiBGL1)$weight**2)/2
 medaiBGL1[lower.tri(medaiBGL1,diag=TRUE)]<-NA
 E(gaiBGL1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(medaiBGL1)))>0)+1L]
 plot(gaiBGL1)

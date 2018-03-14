@@ -17,7 +17,6 @@ devtools::use_package("RcppArmadillo",type="LinkingTo",pkg="BayesianGLasso")
 devtools::document("BayesianGLasso")
 devtools::use_cran_comments("BayesianGLasso")
 
-# roxygen2::roxygenise(package.dir="~/gdrive/Dissertation/Aim2/BayesianGLasso")
 
 currentCode<-as.package("BayesianGLasso")
 
