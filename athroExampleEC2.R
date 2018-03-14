@@ -1,5 +1,6 @@
 ########### Prereqs ###########
 options(stringsAsFactors=FALSE)
+library(methods)
 library(MASS)
 library(BayesianGLasso)
 library(tidyverse)
@@ -28,8 +29,9 @@ simMat<-simMat[rownames(simMat) %in% colnames(m1),colnames(simMat) %in% colnames
 priorHyper<-simMat+.1
 
 ptm<-proc.time()
-aiBGL1<-blockGLasso(m1,iterations=250,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1,iterations=500,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
-                    gammaPriors=20,gammaPriort=.001)
+                    gammaPriors=15,gammaPriort=.001)
 proc.time()-ptm
+
 save(aiBGL1,file="aiBGL1.RData")

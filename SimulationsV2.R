@@ -4,6 +4,7 @@ library(tidyverse)
 library(igraph)
 library(clusterGeneration)
 library(BayesianGLasso)
+library(igraph)
 
 options(stringsAsFactors=FALSE)
 oldPar<-par()
@@ -13,7 +14,7 @@ setwd("~/gdrive/Dissertation/Aim2")
 fun1<-function(r,s,dis,omega,x){
   return((1+r)/(s+omega+dis))
 }
-df1<-expand.grid(dis=seq(0.1,1,.1),omega=seq(0,1,.01))
+df1<-expand.grid(dis=seq(0.1,1,.2),omega=seq(0,1,.01))
 df1$lambda<-NA
 
 for(i in 1:nrow(df1)){
@@ -22,12 +23,12 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-# png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
+png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
   scale_color_discrete(name="Similarity")
-# dev.off()
+dev.off()
 
 ########### Simulated AR(1) data ###########
 nRV<-15L
@@ -127,3 +128,24 @@ for(i in 1:nrow(simGrid)){
   simGrid$ppv[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl[,'TRUE'])
   simGrid$f1[i]<-(2*simGrid$sens[i]*simGrid$ppv[i])/(simGrid$sens[i]+simGrid$ppv[i])
 }
+
+########### Output graphs ###########
+graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors){
+  # Sampler:
+  bgl<-blockGLasso(x1,iterations=10000,burnIn=1000,adaptive=TRUE,adaptiveType="priorHyper",
+                   priorHyper=abs(solve(sim)),gammaPriorr=gammaPriorr,gammaPriors=gammaPriors)
+  pIBgl<-posteriorInference(bgl)
+  bglMed<-pIBgl$posteriorMedian
+  bglCor<-pCorFun(bglMed)
+  
+  # Graph
+  bglG<-graph_from_adjacency_matrix(abs(bglMed),mode="undirected",diag=FALSE,weighted=TRUE)
+  E(bglG)$width<-(E(bglG)$weight**2)
+  bglMed[lower.tri(bglMed,diag=TRUE)]<-NA
+  E(bglG)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(bglMed)))>0)+1L]
+  set.seed(2)
+  return(bglG)
+}
+aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=0.1,gammaPriors=1.0)
+aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=0.1,gammaPriors=1.0)
+rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=0.1,gammaPriors=1.0)
