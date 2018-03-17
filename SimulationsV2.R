@@ -31,7 +31,7 @@ ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw(
 dev.off()
 
 ########### Simulated AR(1) data ###########
-nRV<-15L
+nRV<-20L
 nObs<-10L
 topParam<-.9
 topParamSim<-.975
@@ -57,8 +57,8 @@ pCorsInd<-abs(pCors)>.1
 sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
 
 # Simulated mv random normal:
-set.seed(3)
-x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=sig)
+set.seed(33)
+x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
 
 # Concentration matrix graph:
 Om1<-omega
@@ -133,7 +133,7 @@ for(i in 1:nrow(simGrid)){
 graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors){
   # Sampler:
   bgl<-blockGLasso(x1,iterations=10000,burnIn=1000,adaptive=TRUE,adaptiveType="priorHyper",
-                   priorHyper=abs(solve(sim)),gammaPriorr=gammaPriorr,gammaPriors=gammaPriors)
+                   priorHyper=(abs(solve(sim))**2)/5,gammaPriorr=gammaPriorr,gammaPriors=gammaPriors)
   pIBgl<-posteriorInference(bgl)
   bglMed<-pIBgl$posteriorMedian
   bglCor<-pCorFun(bglMed)
@@ -143,9 +143,12 @@ graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors){
   E(bglG)$width<-(E(bglG)$weight**2)
   bglMed[lower.tri(bglMed,diag=TRUE)]<-NA
   E(bglG)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(bglMed)))>0)+1L]
-  set.seed(2)
   return(bglG)
 }
 aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=0.1,gammaPriors=1.0)
 aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=0.1,gammaPriors=1.0)
 rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=0.1,gammaPriors=1.0)
+
+plot(aIG)
+plot(aNG)
+plot(rG)
