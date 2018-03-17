@@ -110,6 +110,7 @@ proc.time()-ptm
 save(aiBGL1,file="aiBGL1.RData")
 
 ########### Posterior Inference ###########
+load(file="atheroExampleV3Data.RData")
 load(file="aiBGL1.RData")
 pIaiBGL1<-posteriorInference(aiBGL1)
 aiBGL1Med<-pIaiBGL1$posteriorMedian
