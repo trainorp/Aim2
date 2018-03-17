@@ -103,7 +103,7 @@ aiBGL1<-blockGLasso(m1[,samp],iterations=2,burnIn=0,adaptive=TRUE,
 
 ########### Run the sampler: ###########
 ptm<-proc.time()
-aiBGL1<-blockGLasso(m1,iterations=250,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1,iterations=5,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
                     gammaPriors=40,gammaPriort=.001)
 proc.time()-ptm
