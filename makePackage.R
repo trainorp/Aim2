@@ -17,7 +17,6 @@ devtools::use_package("RcppArmadillo",type="LinkingTo",pkg="BayesianGLasso")
 devtools::document("BayesianGLasso")
 devtools::use_cran_comments("BayesianGLasso")
 
-
 currentCode<-as.package("BayesianGLasso")
 
 devtools::load_all(currentCode)
