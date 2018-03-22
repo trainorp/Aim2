@@ -7,6 +7,17 @@ library(igraph)
 
 setwd("~/gdrive/Dissertation/Aim2")
 
+########### Partial correlation Function ###########
+pCorFun<-function(x){
+  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
+  for(j in 1:ncol(pcors)){
+    for(i in 1:nrow(pcors)){
+      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
+    }
+  }
+  return(pcors)
+}
+
 ## Begin don't run:
 ############ Untargeted data ############
 setwd("~/gdrive/AthroMetab/")
@@ -41,11 +52,6 @@ for(i in 1:nrow(sims)){
 df1<-read.csv("~/gdrive/AthroMetab/Data/scaled.csv")
 rownames(df1)<-paste(df1$group,df1$timepoint,df1$ptid,sep="_")
 rm(spec,i)
-save.image(file="atheroExampleV3Data.RData")
-## End don't run:
-
-# Import data:
-load(file="atheroExampleV3Data.RData")
 
 # Follow-up and with annotation only:
 df1<-df1[df1$timepoint=="TF-U" | (df1$group=="sCAD" & df1$timepoint=="T0"),]
@@ -70,38 +76,12 @@ source('~/gdrive/Dissertation/Aim2/heatmap3.R')
 dev.new()
 heatmap3(1-simMat2) # May need to go back and change the resolution
 
-########### Partial correlation Function ###########
-pCorFun<-function(x){
-  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
-  for(j in 1:ncol(pcors)){
-    for(i in 1:nrow(pcors)){
-      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
-    }
-  }
-  return(pcors)
-}
-
-########### Random sample: ###########
-set.seed(3)
-samp<-sample(1:ncol(m1),size=200)
-
-# Regular BGL:
-idk<-blockGLasso(m1[,samp],iterations=200,burnIn=0)
-idk2<-idk$Omegas[[200]]
-colnames(idk2)<-rownames(idk2)<-key$biochemical[match(colnames(m1)[samp],key$id)]
-idk3<-pCorFun(idk2)
-rownames(idk3)<-colnames(idk3)<-colnames(idk2)
-
+########### Run the sampler: ###########
 # Structure Adaptive:
 priorHyper<-simMat+.1
-colnames(m1) == colnames(priorHyper) # Yep
+save.image(file="atheroExampleV3Data.RData")
+## End don't run:
 
-# Smaller sample:
-aiBGL1<-blockGLasso(m1[,samp],iterations=2,burnIn=0,adaptive=TRUE,
-                    adaptiveType="priorHyper",priorHyper=priorHyper[samp,samp],
-                    gammaPriors=10,gammaPriort=.001)
-
-########### Run the sampler: ###########
 ptm<-proc.time()
 aiBGL1<-blockGLasso(m1,iterations=5,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
@@ -110,20 +90,28 @@ proc.time()-ptm
 save(aiBGL1,file="aiBGL1.RData")
 
 ########### Posterior Inference ###########
+# Import data:
 load(file="atheroExampleV3Data.RData")
 load(file="aiBGL1.RData")
+
 pIaiBGL1<-posteriorInference(aiBGL1)
 aiBGL1Med<-pIaiBGL1$posteriorMedian
 aiBGL1Cor<-pCorFun(aiBGL1Med)
 colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
 
 ########### Graph ###########
-aiBGL1MedGraph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",diag=FALSE,weighted=TRUE)
-E(aiBGL1MedGraph)$width<-(E(aiBGL1MedGraph)$weight**2)
-aiBGL1Med[lower.tri(aiBGL1Med,diag=TRUE)]<-NA
+aiBGL1MedGraph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
+                                            diag=FALSE,weighted=TRUE)
 E(aiBGL1MedGraph)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(aiBGL1Med)))>0)+1L]
+aiBGL1MedGraph<-delete_edges(aiBGL1MedGraph,which(E(aiBGL1MedGraph)$weight<.002))
+E(aiBGL1MedGraph)$width<-(E(aiBGL1MedGraph)$weight)*4
+aiBGL1Med[lower.tri(aiBGL1Med,diag=TRUE)]<-NA
 set.seed(2)
-plot(aiBGL1MedGraph)
+
+# Best is drl 
+plot(aiBGL1MedGraph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
+plot(aiBGL1MedGraph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
+plot(aiBGL1MedGraph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
 
 aiBGL1MedGraph<-delete_edges(aiBGL1MedGraph,which(E(aiBGL1MedGraph)$weight<0.001))
 idk<-as.data.frame(get.edgelist(aiBGL1MedGraph))
