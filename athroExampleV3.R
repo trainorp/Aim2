@@ -4,6 +4,7 @@ library(MASS)
 library(BayesianGLasso)
 library(tidyverse)
 library(igraph)
+library(RCy3)
 
 setwd("~/gdrive/Dissertation/Aim2")
 
@@ -99,21 +100,33 @@ aiBGL1$Omegas<-lapply(aiBGL1$Omegas,pCorFun)
 
 # Posterior inference:
 pIaiBGL1<-posteriorInference(aiBGL1)
+rm(aiBGL1)
 aiBGL1Cor<-pIaiBGL1$posteriorMedian
 colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
 
 ########### Graph ###########
 aiBGL1Graph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
                                             diag=FALSE,weighted=TRUE)
+aiBGLE<-as.data.frame(get.edgelist(aiBGL1Graph))
+aiBGLE$weight<-get.edge.attribute(aiBGL1Graph,"weight")
+aiBGLE$cor<-aiBGL1Cor[lower.tri(aiBGL1Cor)]
+E(aiBGL1Graph)$color<-c("darkred","navyblue")[as.integer(aiBGL1Cor[lower.tri(aiBGL1Cor)]>0)+1L]
+aiBGLE$col<-get.edge.attribute(aiBGL1Graph,"color")
 
-# Fix this!
-E(aiBGL1Graph)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(aiBGL1Cor)))>0)+1L]
-aiBGL1Graph<-delete_edges(aiBGL1Graph,which(E(aiBGL1Graph)$weight<.002))
+
+aiBGL1Graph<-delete_edges(aiBGL1Graph,which(E(aiBGL1Graph)$weight<.01))
 E(aiBGL1Graph)$width<-(E(aiBGL1Graph)$weight)*4
-aiBGL1Cor[lower.tri(aiBGL1Cor,diag=TRUE)]<-NA
-set.seed(2)
 
-# Best is drl 
+# Best is not drl 
 plot(aiBGL1Graph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
 plot(aiBGL1Graph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
 plot(aiBGL1Graph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
+
+aiBGLnel<-as_graphnel(aiBGL1Graph)
+aiBGLnel<-initEdgeAttribute(aiBGLnel,"weight","numeric",0)
+aiBGLnel<-initEdgeAttribute(aiBGLnel,"width","numeric",0)
+aiBGLnel<-initEdgeAttribute(aiBGLnel,"color","char","black")
+
+cw<-CytoscapeWindow('idk',graph=aiBGLnel,overwrite=TRUE)
+displayGraph(cw)
+
