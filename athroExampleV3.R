@@ -83,9 +83,9 @@ save.image(file="atheroExampleV3Data.RData")
 ## End don't run:
 
 ptm<-proc.time()
-aiBGL1<-blockGLasso(m1,iterations=5,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1,iterations=2,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
-                    gammaPriors=40,gammaPriort=.001)
+                    lambdaii=35,gammaPriors=12,gammaPriort=.001)
 proc.time()-ptm
 save(aiBGL1,file="aiBGL1.RData")
 
@@ -94,25 +94,26 @@ save(aiBGL1,file="aiBGL1.RData")
 load(file="atheroExampleV3Data.RData")
 load(file="aiBGL1.RData")
 
+# Apply partial correlation function:
+aiBGL1$Omegas<-lapply(aiBGL1$Omegas,pCorFun)
+
+# Posterior inference:
 pIaiBGL1<-posteriorInference(aiBGL1)
-aiBGL1Med<-pIaiBGL1$posteriorMedian
-aiBGL1Cor<-pCorFun(aiBGL1Med)
+aiBGL1Cor<-pIaiBGL1$posteriorMedian
 colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
 
 ########### Graph ###########
-aiBGL1MedGraph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
+aiBGL1Graph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
                                             diag=FALSE,weighted=TRUE)
-E(aiBGL1MedGraph)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(aiBGL1Med)))>0)+1L]
-aiBGL1MedGraph<-delete_edges(aiBGL1MedGraph,which(E(aiBGL1MedGraph)$weight<.002))
-E(aiBGL1MedGraph)$width<-(E(aiBGL1MedGraph)$weight)*4
-aiBGL1Med[lower.tri(aiBGL1Med,diag=TRUE)]<-NA
+
+# Fix this!
+E(aiBGL1Graph)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(aiBGL1Cor)))>0)+1L]
+aiBGL1Graph<-delete_edges(aiBGL1Graph,which(E(aiBGL1Graph)$weight<.002))
+E(aiBGL1Graph)$width<-(E(aiBGL1Graph)$weight)*4
+aiBGL1Cor[lower.tri(aiBGL1Cor,diag=TRUE)]<-NA
 set.seed(2)
 
 # Best is drl 
-plot(aiBGL1MedGraph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
-plot(aiBGL1MedGraph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
-plot(aiBGL1MedGraph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
-
-aiBGL1MedGraph<-delete_edges(aiBGL1MedGraph,which(E(aiBGL1MedGraph)$weight<0.001))
-idk<-as.data.frame(get.edgelist(aiBGL1MedGraph))
-plot(aiBGL1MedGraph)
+plot(aiBGL1Graph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
+plot(aiBGL1Graph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
+plot(aiBGL1Graph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
