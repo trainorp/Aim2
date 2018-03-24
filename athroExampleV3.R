@@ -104,6 +104,9 @@ rm(aiBGL1)
 aiBGL1Cor<-pIaiBGL1$posteriorMedian
 colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
 
+# Save image:
+save.image(file="atheroExampleV3DataPart2.RData")
+
 ########### Graph ###########
 aiBGL1Graph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
                                             diag=FALSE,weighted=TRUE)
