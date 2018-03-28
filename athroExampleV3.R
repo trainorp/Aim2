@@ -8,6 +8,7 @@ library(RCy3)
 
 setwd("~/gdrive/Dissertation/Aim2")
 
+## Begin don't run:
 ########### Partial correlation Function ###########
 pCorFun<-function(x){
   pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
@@ -19,7 +20,6 @@ pCorFun<-function(x){
   return(pcors)
 }
 
-## Begin don't run:
 ############ Untargeted data ############
 setwd("~/gdrive/AthroMetab/")
 spec<-read.csv("Data/AthroACSRawSpectra.csv")
@@ -42,6 +42,7 @@ setwd("~/gdrive/Dissertation/Aim2")
 ############ Structural similarity ############
 sims<-read.table("athroMetab_color_tanimotos.txt")
 sims<-sims[!(sims$V1 %in% key$id[grepl("Tentative",key$biochemical)] | sims$V2 %in% key$id[grepl("Tentative",key$biochemical)]),]
+sims<-sims[!(sims$V1=="M681" | sims$V2=="M681"),]
 simMat<-matrix(NA,nrow=length(unique(sims$V1)),ncol=length(unique(sims$V1)))
 rownames(simMat)<-colnames(simMat)<-unique(sims$V1)
 for(i in 1:nrow(sims)){
@@ -60,7 +61,7 @@ m1<-as.matrix(df1[,!names(df1) %in% c("group","timepoint","ptid")])
 m1<-scale(m1,center=TRUE,scale=FALSE)
 
 # Entropy filter:
-m1<-m1[,apply(m1,2,function(x) length(unique(x))>28)]
+m1<-m1[,apply(m1,2,function(x) length(unique(x))>38)]
 
 # Filter for those without structural information:
 m1<-m1[,colnames(m1) %in% colnames(simMat)]
@@ -84,10 +85,11 @@ save.image(file="atheroExampleV3Data.RData")
 ## End don't run:
 
 ptm<-proc.time()
-aiBGL1<-blockGLasso(m1,iterations=2,burnIn=0,adaptive=TRUE,
+aiBGL1<-blockGLasso(m1,iterations=10,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
-                    lambdaii=35,gammaPriors=12,gammaPriort=.001)
+                    lambdaii=32,gammaPriors=10,gammaPriort=.001)
 proc.time()-ptm
+summary(c(aiBGL1$lambdas[[10]])[c(aiBGL1$lambdas[[10]])>0])
 save(aiBGL1,file="aiBGL1.RData")
 
 ########### Posterior Inference ###########
@@ -108,6 +110,7 @@ colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key
 save.image(file="atheroExampleV3DataPart2.RData")
 
 ########### Graph ###########
+load(file="atheroExampleV3DataPart2.RData")
 aiBGL1Graph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
                                             diag=FALSE,weighted=TRUE)
 aiBGLE<-as.data.frame(get.edgelist(aiBGL1Graph))
@@ -115,7 +118,6 @@ aiBGLE$weight<-get.edge.attribute(aiBGL1Graph,"weight")
 aiBGLE$cor<-aiBGL1Cor[lower.tri(aiBGL1Cor)]
 E(aiBGL1Graph)$color<-c("darkred","navyblue")[as.integer(aiBGL1Cor[lower.tri(aiBGL1Cor)]>0)+1L]
 aiBGLE$col<-get.edge.attribute(aiBGL1Graph,"color")
-
 
 aiBGL1Graph<-delete_edges(aiBGL1Graph,which(E(aiBGL1Graph)$weight<.01))
 E(aiBGL1Graph)$width<-(E(aiBGL1Graph)$weight)*4
@@ -125,11 +127,36 @@ plot(aiBGL1Graph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
 plot(aiBGL1Graph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
 plot(aiBGL1Graph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
 
+# Add class function:
+addClass<-function(x){
+  attr(x$weight,"class")<-"FLOATING"
+  return(x)
+}
+
 aiBGLnel<-as_graphnel(aiBGL1Graph)
-aiBGLnel<-initEdgeAttribute(aiBGLnel,"weight","numeric",0)
+aiBGLnel<-initEdgeAttribute(aiBGLnel,'weight','numeric',0)
 aiBGLnel<-initEdgeAttribute(aiBGLnel,"width","numeric",0)
 aiBGLnel<-initEdgeAttribute(aiBGLnel,"color","char","black")
 
+# Export Weights attribute:
+aiBGLnelWeights<-data.frame(weights=unlist(edgeData(aiBGLnel,attr="weight")))
+aiBGLnelWeights$name<-rownames(aiBGLnelWeights)
+aiBGLnelWeights$name<-gsub("\\|"," (unspecified) ",aiBGLnelWeights$name)
+write.csv(aiBGLnelWeights,file="graphWeights.csv",row.names = FALSE)
+
+# Export Widths attribute:
+aiBGLnelWidths<-data.frame(widths=unlist(edgeData(aiBGLnel,attr="width")))
+aiBGLnelWidths$name<-rownames(aiBGLnelWidths)
+aiBGLnelWidths$name<-gsub("\\|"," (unspecified) ",aiBGLnelWidths$name)
+write.csv(aiBGLnelWidths,file="graphWidths.csv",row.names = FALSE)
+
+# Export Color attribute:
+aiBGLnelColors<-data.frame(colors=unlist(edgeData(aiBGLnel,attr="color")))
+aiBGLnelColors$name<-rownames(aiBGLnelColors)
+aiBGLnelColors$name<-gsub("\\|"," (unspecified) ",aiBGLnelColors$name)
+write.csv(aiBGLnelColors,file="graphColors.csv",row.names = FALSE)
+
+deleteAllWindows(CytoscapeConnection())
 cw<-CytoscapeWindow('idk',graph=aiBGLnel,overwrite=TRUE)
 displayGraph(cw)
-
+layoutNetwork(cw,'forcedirected')
