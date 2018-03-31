@@ -80,16 +80,16 @@ heatmap3(1-simMat2) # May need to go back and change the resolution
 
 ########### Run the sampler: ###########
 # Structure Adaptive:
-priorHyper<-simMat+.1
+priorHyper<-2*(simMat**2)+.1
 save.image(file="atheroExampleV3Data.RData")
 ## End don't run:
 
 ptm<-proc.time()
 aiBGL1<-blockGLasso(m1,iterations=10,burnIn=0,adaptive=TRUE,
                     adaptiveType="priorHyper",priorHyper=priorHyper,
-                    lambdaii=32,gammaPriors=10,gammaPriort=.001)
+                    lambdaii=62,gammaPriors=8,gammaPriort=.001)
 proc.time()-ptm
-summary(c(aiBGL1$lambdas[[10]])[c(aiBGL1$lambdas[[10]])>0])
+summary(c(aiBGL1$lambdas[[2]])[c(aiBGL1$lambdas[[2]])>0])
 save(aiBGL1,file="aiBGL1.RData")
 
 ########### Posterior Inference ###########
@@ -97,66 +97,53 @@ save(aiBGL1,file="aiBGL1.RData")
 load(file="atheroExampleV3Data.RData")
 load(file="aiBGL1.RData")
 
-# Apply partial correlation function:
-aiBGL1$Omegas<-lapply(aiBGL1$Omegas,pCorFun)
-
-# Posterior inference:
+# Concentration matrix:
 pIaiBGL1<-posteriorInference(aiBGL1)
-rm(aiBGL1)
+aiBGL1Con<-pIaiBGL1$posteriorMedian
+colnames(aiBGL1Con)<-rownames(aiBGL1Con)<-key$biochemical[match(colnames(m1),key$id)]
+
+# Partial correlation matrix:
+aiBGL1$Omegas<-lapply(aiBGL1$Omegas,pCorFun)
+pIaiBGL1<-posteriorInference(aiBGL1)
 aiBGL1Cor<-pIaiBGL1$posteriorMedian
 colnames(aiBGL1Cor)<-rownames(aiBGL1Cor)<-key$biochemical[match(colnames(m1),key$id)]
+rm(aiBGL1)
 
 # Save image:
 save.image(file="atheroExampleV3DataPart2.RData")
 
 ########### Graph ###########
 load(file="atheroExampleV3DataPart2.RData")
-aiBGL1Graph<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",
-                                            diag=FALSE,weighted=TRUE)
-aiBGLE<-as.data.frame(get.edgelist(aiBGL1Graph))
-aiBGLE$weight<-get.edge.attribute(aiBGL1Graph,"weight")
-aiBGLE$cor<-aiBGL1Cor[lower.tri(aiBGL1Cor)]
-E(aiBGL1Graph)$color<-c("darkred","navyblue")[as.integer(aiBGL1Cor[lower.tri(aiBGL1Cor)]>0)+1L]
-aiBGLE$col<-get.edge.attribute(aiBGL1Graph,"color")
 
-aiBGL1Graph<-delete_edges(aiBGL1Graph,which(E(aiBGL1Graph)$weight<.01))
-E(aiBGL1Graph)$width<-(E(aiBGL1Graph)$weight)*4
+graphFun<-function(mat){
+  # Graph from adjacency 
+  g<-graph_from_adjacency_matrix(abs(get(mat)),mode="undirected",diag=FALSE,weighted=TRUE)
+  e<-as.data.frame(get.edgelist(g))
+  E(g)$color<-c("darkred","navyblue")[as.integer(mat[lower.tri(mat)]>0)+1L]
+  e$col<-get.edge.attribute(g,"color")
+  g<-delete_edges(g,which(E(g)$weight<.01))
 
-# Best is not drl 
-plot(aiBGL1Graph,layout=layout_with_drl,vertex.size=2,vertex.label=NA)
-plot(aiBGL1Graph,layout=layout_with_fr,vertex.size=2,vertex.label=NA)
-plot(aiBGL1Graph,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
-
-# Add class function:
-addClass<-function(x){
-  attr(x$weight,"class")<-"FLOATING"
-  return(x)
+  # Graph as graphNEL
+  gNel<-as_graphnel(g)
+  gNel<-initEdgeAttribute(gNel,'weight','numeric',0)
+  gNel<-initEdgeAttribute(gNel,"color","char","black")
+  
+  # Export Weights attribute:
+  w<-data.frame(weights=unlist(edgeData(gNel,attr="weight")))
+  w$name<-rownames(w)
+  w$name<-gsub("\\|"," (unspecified) ",w$name)
+  write.csv(w,file=paste0(mat,"Weights",".csv"),row.names=FALSE)
+  
+  # Export Color attribute:
+  co<-data.frame(colors=unlist(edgeData(gNel,attr="color")))
+  co$name<-rownames(co)
+  co$name<-gsub("\\|"," (unspecified) ",co$name)
+  write.csv(co,file="graphColors.csv",row.names = FALSE)
+  
+  
+  return(gNel)
 }
-
-aiBGLnel<-as_graphnel(aiBGL1Graph)
-aiBGLnel<-initEdgeAttribute(aiBGLnel,'weight','numeric',0)
-aiBGLnel<-initEdgeAttribute(aiBGLnel,"width","numeric",0)
-aiBGLnel<-initEdgeAttribute(aiBGLnel,"color","char","black")
-
-# Export Weights attribute:
-aiBGLnelWeights<-data.frame(weights=unlist(edgeData(aiBGLnel,attr="weight")))
-aiBGLnelWeights$name<-rownames(aiBGLnelWeights)
-aiBGLnelWeights$name<-gsub("\\|"," (unspecified) ",aiBGLnelWeights$name)
-write.csv(aiBGLnelWeights,file="graphWeights.csv",row.names = FALSE)
-
-# Export Widths attribute:
-aiBGLnelWidths<-data.frame(widths=unlist(edgeData(aiBGLnel,attr="width")))
-aiBGLnelWidths$name<-rownames(aiBGLnelWidths)
-aiBGLnelWidths$name<-gsub("\\|"," (unspecified) ",aiBGLnelWidths$name)
-write.csv(aiBGLnelWidths,file="graphWidths.csv",row.names = FALSE)
-
-# Export Color attribute:
-aiBGLnelColors<-data.frame(colors=unlist(edgeData(aiBGLnel,attr="color")))
-aiBGLnelColors$name<-rownames(aiBGLnelColors)
-aiBGLnelColors$name<-gsub("\\|"," (unspecified) ",aiBGLnelColors$name)
-write.csv(aiBGLnelColors,file="graphColors.csv",row.names = FALSE)
 
 deleteAllWindows(CytoscapeConnection())
 cw<-CytoscapeWindow('idk',graph=aiBGLnel,overwrite=TRUE)
 displayGraph(cw)
-layoutNetwork(cw,'forcedirected')
