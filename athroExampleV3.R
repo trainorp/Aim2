@@ -61,7 +61,7 @@ m1<-as.matrix(df1[,!names(df1) %in% c("group","timepoint","ptid")])
 m1<-scale(m1,center=TRUE,scale=FALSE)
 
 # Entropy filter:
-m1<-m1[,apply(m1,2,function(x) length(unique(x))>38)]
+m1<-m1[,apply(m1,2,function(x) length(unique(x))>14)]
 
 # Filter for those without structural information:
 m1<-m1[,colnames(m1) %in% colnames(simMat)]
@@ -115,12 +115,20 @@ save.image(file="atheroExampleV3DataPart2.RData")
 ########### Graph ###########
 load(file="atheroExampleV3DataPart2.RData")
 
+# Weird name issue:
+colnames(aiBGL1Con)[colnames(aiBGL1Con)=="tryptophan betaine "]<-"tryptophan betaine"
+colnames(aiBGL1Cor)[colnames(aiBGL1Cor)=="tryptophan betaine "]<-"tryptophan betaine"
+rownames(aiBGL1Con)[rownames(aiBGL1Con)=="tryptophan betaine "]<-"tryptophan betaine"
+rownames(aiBGL1Cor)[rownames(aiBGL1Cor)=="tryptophan betaine "]<-"tryptophan betaine"
+
 graphFun<-function(mat){
   # Graph from adjacency 
   g<-graph_from_adjacency_matrix(abs(get(mat)),mode="undirected",diag=FALSE,weighted=TRUE)
   e<-as.data.frame(get.edgelist(g))
-  E(g)$color<-c("darkred","navyblue")[as.integer(mat[lower.tri(mat)]>0)+1L]
+  E(g)$color<-c("darkred","navyblue")[as.integer(get(mat)[lower.tri(get(mat))]>0)+1L]
   e$col<-get.edge.attribute(g,"color")
+  
+  # Delete edges:
   g<-delete_edges(g,which(E(g)$weight<.01))
 
   # Graph as graphNEL
@@ -138,12 +146,13 @@ graphFun<-function(mat){
   co<-data.frame(colors=unlist(edgeData(gNel,attr="color")))
   co$name<-rownames(co)
   co$name<-gsub("\\|"," (unspecified) ",co$name)
-  write.csv(co,file="graphColors.csv",row.names = FALSE)
-  
+  write.csv(co,file=paste0(mat,"Colors",".csv"),row.names=FALSE)
   
   return(gNel)
 }
 
 deleteAllWindows(CytoscapeConnection())
-cw<-CytoscapeWindow('idk',graph=aiBGLnel,overwrite=TRUE)
+cw<-CytoscapeWindow('aiBGL1Cor',graph=graphFun("aiBGL1Cor"),overwrite=TRUE)
 displayGraph(cw)
+cw2<-CytoscapeWindow('aiBGL1Con',graph=graphFun("aiBGL1Con"),overwrite=TRUE)
+displayGraph(cw2)

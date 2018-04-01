@@ -62,6 +62,7 @@ x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
 
 # Concentration matrix graph:
 Om1<-omega
+# Om1<-pCors
 gOm1<-graph_from_adjacency_matrix(abs(Om1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
@@ -130,10 +131,13 @@ for(i in 1:nrow(simGrid)){
 }
 
 ########### Output graphs ###########
-graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors){
+graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors,
+                   lambdaPriora=NULL,lambdaPriorb=NULL){
   # Sampler:
-  bgl<-blockGLasso(x1,iterations=10000,burnIn=1000,adaptive=TRUE,adaptiveType="priorHyper",
-                   priorHyper=(abs(solve(sim))**2)/5,gammaPriorr=gammaPriorr,gammaPriors=gammaPriors)
+  bgl<-blockGLasso(x1,iterations=10000,burnIn=1000,adaptive=adaptive,
+                   adaptiveType=adaptiveType,priorHyper=(abs(solve(sim))**2),
+                   gammaPriorr=gammaPriorr,gammaPriors=gammaPriors,
+                   lambdaPriora=lambdaPriora,lambdaPriorb=lambdaPriorb)
   pIBgl<-posteriorInference(bgl)
   bglMed<-pIBgl$posteriorMedian
   bglCor<-pCorFun(bglMed)
@@ -145,9 +149,10 @@ graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors){
   E(bglG)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(bglMed)))>0)+1L]
   return(bglG)
 }
-aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=0.1,gammaPriors=1.0)
-aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=0.1,gammaPriors=1.0)
-rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=0.1,gammaPriors=1.0)
+aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=1,gammaPriors=10)
+aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=5)
+rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=NULL,gammaPriors=NULL,
+             lambdaPriora=1,lambdaPriorb=10)
 
 plot(aIG)
 plot(aNG)
