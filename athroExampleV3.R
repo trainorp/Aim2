@@ -112,7 +112,7 @@ rm(aiBGL1)
 # Save image:
 save.image(file="atheroExampleV3DataPart2.RData")
 
-########### Graph ###########
+########### Cytoscape Graph ###########
 load(file="atheroExampleV3DataPart2.RData")
 
 # Weird name issue:
@@ -121,6 +121,7 @@ colnames(aiBGL1Cor)[colnames(aiBGL1Cor)=="tryptophan betaine "]<-"tryptophan bet
 rownames(aiBGL1Con)[rownames(aiBGL1Con)=="tryptophan betaine "]<-"tryptophan betaine"
 rownames(aiBGL1Cor)[rownames(aiBGL1Cor)=="tryptophan betaine "]<-"tryptophan betaine"
 
+# Cytoscape graph function:
 graphFun<-function(mat){
   # Graph from adjacency 
   g<-graph_from_adjacency_matrix(abs(get(mat)),mode="undirected",diag=FALSE,weighted=TRUE)
@@ -151,8 +152,14 @@ graphFun<-function(mat){
   return(gNel)
 }
 
+# Cytoscape Windows:
 deleteAllWindows(CytoscapeConnection())
 cw<-CytoscapeWindow('aiBGL1Cor',graph=graphFun("aiBGL1Cor"),overwrite=TRUE)
 displayGraph(cw)
 cw2<-CytoscapeWindow('aiBGL1Con',graph=graphFun("aiBGL1Con"),overwrite=TRUE)
 displayGraph(cw2)
+
+########### igraph Graph ###########
+load(file="atheroExampleV3DataPart2.RData")
+
+g<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",diag=FALSE,weighted=TRUE)
