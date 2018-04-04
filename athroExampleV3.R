@@ -76,7 +76,19 @@ colnames(simMat2)<-key$biochemical[match(colnames(simMat2),key$id)]
 
 source('~/gdrive/Dissertation/Aim2/heatmap3.R')
 dev.new()
-heatmap3(1-simMat2) # May need to go back and change the resolution
+heatmap3(1-simMat2,labRow="",labCol="",nam="NoLab")
+heatmap3(1-simMat2,resMult=1.25,nam="Lab")
+
+# Cut tree for smaller cluster picture:
+hc<-hclust(as.dist(1-simMat2),method="ward.D2")
+plot(hc,cex=.2)
+ct<-data.frame(clust=cutree(hc,h=1.01))
+
+# Small dataset:
+simMat3<-simMat2
+simMat3<-simMat3[rownames(simMat3) %in% rownames(ct)[ct$clust==9],colnames(simMat3) %in% rownames(ct)[ct$clust==9]]
+colnames(simMat3)<-rownames(simMat3)<-gsub("(alpha or beta)","",colnames(simMat3))
+heatmap3(1-simMat3,nam="Sub",lwdPar=2,cFac=6)
 
 ########### Run the sampler: ###########
 # Structure Adaptive:
