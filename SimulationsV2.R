@@ -68,22 +68,22 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-# png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
-# par(mar=c(1,1,1,1))
+png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
 set.seed(2)
 plot(gOm1)
-# dev.off()
+dev.off()
 
 # Correlation adjacency plot:
 gCor<-graph_from_adjacency_matrix(cor(x1),mode="undirected",diag=FALSE,weighted=TRUE)
 E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
-# png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
-# par(mar=c(1,1,1,1))
+png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
+par(mar=c(1,1,1,1))
 set.seed(32)
 plot(gCor)
-# dev.off()
+dev.off()
 
 ########### Simulation function ############
 simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by=.5)),
@@ -112,17 +112,20 @@ for(i in 1:nrow(simGrid)){
       }
     )
   }
+  if(attempt>=3 & is.null(bgl)){
+    next
+  }
   
   # Posterior inference object:
+  bgl$Omegas<-lapply(bgl$Omegas,pCorFun)
   pIBgl<-posteriorInference(bgl)
   
   # Posterior median:
   medBgl<-pIBgl$posteriorMedian
-  medBglSigma<-solve(medBgl)
-  
+
   # Topological error analysis:
   pCorsMedBgl<-pCorFun(medBgl)
-  pCorsIndMedBgl<-abs(pCorsMedBgl)>.1
+  pCorsIndMedBgl<-abs(pCorsMedBgl)>.2
   tabBgl<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedBgl)))
   simGrid$sens[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl['TRUE',])
   simGrid$spec[i]<-tabBgl['FALSE','FALSE']/sum(tabBgl['FALSE',])
