@@ -92,7 +92,7 @@ simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by
 simGrid<-simGrid %>% filter(!(adaptive==FALSE & adaptiveType=="priorHyper"))
 simGrid$iterations<-1000
 simGrid$burnIn<-100
-simGrid$f1<-simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
+simGrid$auc<-simGrid$f1<-simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
 for(i in 1:nrow(simGrid)){
   # Gibbs sampler:
   bgl<-NULL
@@ -131,7 +131,13 @@ for(i in 1:nrow(simGrid)){
   simGrid$spec[i]<-tabBgl['FALSE','FALSE']/sum(tabBgl['FALSE',])
   simGrid$ppv[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl[,'TRUE'])
   simGrid$f1[i]<-(2*simGrid$sens[i]*simGrid$ppv[i])/(simGrid$sens[i]+simGrid$ppv[i])
+  
+  simGrid$auc[i]<-as.numeric(pROC::roc(response=c(pCorsInd),predictor=c(abs(pCorsMedBgl)))$auc)
 }
+
+########### Sim Grid plots ###########
+ggplot(simGrid,aes(x=gammaPriorr,color=as.factor(gammaPriors),y=sens))+geom_point()+
+  geom_line()
 
 ########### Output graphs ###########
 graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors,
