@@ -175,3 +175,18 @@ displayGraph(cw2)
 load(file="atheroExampleV3DataPart2.RData")
 
 g<-graph_from_adjacency_matrix(abs(aiBGL1Cor),mode="undirected",diag=FALSE,weighted=TRUE)
+g$Cor<-aiBGL1Cor[lower.tri(aiBGL1Cor)]
+mycol<-rgb(0,0,150,max=255,alpha=120)
+E(g)$color<-c("darkred",mycol)[as.integer(aiBGL1Cor[lower.tri(aiBGL1Cor)]>0)+1L]
+
+g1<-delete_edges(g,which(E(g)$weight<.01))
+E(g1)$width<-(E(g1)$weight**1.2)*10
+
+png(file="Plots/aiBGL1CorBigGraph.png",height=6,width=6,units="in",res=300)
+par(mar=c(0,0,0,0))
+plot(g1,layout=layout_with_fr,vertex.size=2,vertex.label=NA)	
+dev.off()
+
+plot(g1,layout=layout_with_mds,vertex.size=2,vertex.label=NA)
+
+plot(g,layout=layout_nicely)
