@@ -69,7 +69,7 @@ Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
 png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+par(bg=NA,mar=c(0,0,0,0))
 set.seed(2)
 plot(gOm1)
 dev.off()
@@ -80,7 +80,7 @@ E(gCor)$width<-(E(gCor)$weight**2)
 E(gCor)$color<-"darkred"
 
 png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
-par(mar=c(1,1,1,1))
+par(bg=NA,mar=c(0,0,0,0))
 set.seed(32)
 plot(gCor)
 dev.off()
@@ -163,6 +163,17 @@ aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=5)
 rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=NULL,gammaPriors=NULL,
              lambdaPriora=1,lambdaPriorb=10)
 
+png(file="Plots/aIG.png",height=6,width=6,units="in",res=600)
+par(bg=NA,mar=c(0,0,0,0))
 plot(aIG)
+dev.off()
+
+png(file="Plots/aNG.png",height=6,width=6,units="in",res=600)
+par(bg=NA,mar=c(0,0,0,0))
 plot(aNG)
+dev.off()
+
+png(file="Plots/rG.png",height=6,width=6,units="in",res=600)
+par(bg=NA,mar=c(0,0,0,0))
 plot(rG)
+dev.off()
