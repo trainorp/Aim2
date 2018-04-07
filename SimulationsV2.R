@@ -158,10 +158,10 @@ graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors,
   E(bglG)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(bglMed)))>0)+1L]
   return(bglG)
 }
-aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=1,gammaPriors=10)
-aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=5)
+aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=1,gammaPriors=5)
+aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=1)
 rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=NULL,gammaPriors=NULL,
-             lambdaPriora=1,lambdaPriorb=10)
+             lambdaPriora=1,lambdaPriorb=20)
 
 png(file="Plots/aIG.png",height=6,width=6,units="in",res=600)
 par(bg=NA,mar=c(0,0,0,0))
