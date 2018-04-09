@@ -9,6 +9,7 @@ heatmap3<-function (distForPlot, Rowv = NULL, Colv = NULL,
           verbose = getOption("verbose"),resMult=1,nam=NULL,lwdPar=.4,
           cFac=1,...){
   library(colorRamps)
+  par(bg=NA)
   nr <- nc <- ncol(distForPlot) 
   if (!is.numeric(margins) || length(margins) != 2L) 
     stop("'margins' must be a numeric vector of length 2")
@@ -33,6 +34,7 @@ heatmap3<-function (distForPlot, Rowv = NULL, Colv = NULL,
   dev.off()
   png(file=paste0("Plots/MISimClustWardD2Color",nam,".png"),
       height=12,width=12,units="in",res=600*resMult)
+  par(bg=NA)
   dev.hold()
   on.exit(dev.flush())
   op <- par(no.readonly = TRUE)
@@ -62,6 +64,7 @@ heatmap3<-function (distForPlot, Rowv = NULL, Colv = NULL,
   
   png(file=paste0("Plots/MIcompSimDendColor",nam,".png"),
       height=10,width=12,units="in",res=300*resMult)
+  par(bg=NA)
   plot(ddr,nodePar=list(pch=NA,cex=.5,lab.cex=.25))
   dev.off()
   

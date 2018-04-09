@@ -23,7 +23,7 @@ for(i in 1:nrow(df1)){
 
 df1$dis<-factor(df1$dis)
 
-png(filename="Plots/lambdasVsSim.png",width=4.5,height=3.5,units="in",res=600)
+png(filename="Plots/lambdasVsSim.png",width=5.5,height=3.5,units="in",res=600)
 ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw()+
   xlab(expression(paste("|",tilde(omega)[ij],"|")))+
   ylab(expression(paste(E(lambda["ij"]))))+
@@ -57,7 +57,7 @@ pCorsInd<-abs(pCors)>.1
 sim<-toeplitz(topParamSim**(0:(nRV-1L))) # True similarity matrix
 
 # Simulated mv random normal:
-set.seed(33)
+set.seed(333)
 x1<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
 
 # Concentration matrix graph:
@@ -68,9 +68,9 @@ E(gOm1)$width<-(E(gOm1)$weight**2)/4
 Om1[lower.tri(Om1,diag=TRUE)]<-NA
 E(gOm1)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(Om1)))>0)+1L]
 
-png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=300)
+png(file="Plots/AR1_Om.png",height=5,width=5,units="in",res=600)
 par(bg=NA,mar=c(0,0,0,0))
-set.seed(2)
+set.seed(3)
 plot(gOm1)
 dev.off()
 
@@ -81,7 +81,7 @@ E(gCor)$color<-"darkred"
 
 png(file="Plots/AR1_Cor.png",height=5,width=5,units="in",res=300)
 par(bg=NA,mar=c(0,0,0,0))
-set.seed(32)
+set.seed(6)
 plot(gCor)
 dev.off()
 
@@ -163,17 +163,20 @@ aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=1)
 rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=NULL,gammaPriors=NULL,
              lambdaPriora=1,lambdaPriorb=20)
 
-png(file="Plots/aIG.png",height=6,width=6,units="in",res=600)
+png(file="Plots/aIG.png",height=6,width=6,units="in",res=900) # e
 par(bg=NA,mar=c(0,0,0,0))
+set.seed(3)
 plot(aIG)
 dev.off()
 
-png(file="Plots/aNG.png",height=6,width=6,units="in",res=600)
+png(file="Plots/aNG.png",height=6,width=6,units="in",res=900) # d
 par(bg=NA,mar=c(0,0,0,0))
+set.seed(3)
 plot(aNG)
 dev.off()
 
-png(file="Plots/rG.png",height=6,width=6,units="in",res=600)
+png(file="Plots/rG.png",height=6,width=6,units="in",res=900) # c
 par(bg=NA,mar=c(0,0,0,0))
+set.seed(3)
 plot(rG)
 dev.off()
