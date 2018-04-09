@@ -76,7 +76,7 @@ colnames(simMat2)<-key$biochemical[match(colnames(simMat2),key$id)]
 
 source('~/gdrive/Dissertation/Aim2/heatmap3.R')
 dev.new()
-heatmap3(1-simMat2,labRow="",labCol="",nam="NoLab")
+heatmap3(1-simMat2,labRow="",labCol="",nam="NoLab",resMult=1.25)
 heatmap3(1-simMat2,resMult=1.25,nam="Lab")
 
 # Cut tree for smaller cluster picture:
@@ -182,8 +182,8 @@ E(g)$color<-c("darkred",mycol)[as.integer(aiBGL1Cor[lower.tri(aiBGL1Cor)]>0)+1L]
 g1<-delete_edges(g,which(E(g)$weight<.01))
 E(g1)$width<-(E(g1)$weight**1.2)*10
 
-png(file="Plots/aiBGL1CorBigGraph.png",height=6,width=6,units="in",res=300)
-par(mar=c(0,0,0,0))
+png(file="Plots/aiBGL1CorBigGraph.png",height=6,width=6,units="in",res=500)
+par(mar=c(0,0,0,0),bg=NA)
 plot(g1,layout=layout_with_fr,vertex.size=2,vertex.label=NA)	
 dev.off()
 
