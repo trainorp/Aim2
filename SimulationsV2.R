@@ -30,7 +30,18 @@ ggplot(data=df1,aes(x=omega,y=lambda,color=dis,group=dis))+geom_line()+theme_bw(
   scale_color_discrete(name="Similarity")
 dev.off()
 
-########### Simulated AR(1) data ###########
+########### Partial correlation function ###########
+pCorFun<-function(x){
+  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
+  for(j in 1:ncol(pcors)){
+    for(i in 1:nrow(pcors)){
+      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
+    }
+  }
+  return(pcors)
+}
+
+########### One Round Simulated AR(1) data ###########
 nRV<-20L
 nObs<-10L
 topParam<-.9
@@ -41,15 +52,6 @@ sig<-toeplitz(topParam**(0:(nRV-1L))) # True covariance matrix
 omega<-solve(sig) # True concentration matrix
 
 # True partial correlations:
-pCorFun<-function(x){
-  pcors<-matrix(0,nrow=nrow(x),ncol=ncol(x))
-  for(j in 1:ncol(pcors)){
-    for(i in 1:nrow(pcors)){
-      pcors[i,j]<-(-x[i,j]/sqrt(x[i,i]*x[j,j]))
-    }
-  }
-  return(pcors)
-}
 pCors<-pCorFun(omega)
 pCorsInd<-abs(pCors)>.1
 
@@ -86,13 +88,13 @@ plot(gCor)
 dev.off()
 
 ########### Simulation function ############
-simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,.5),gammaPriors=10**(seq(-3,0,by=.5)),
+simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,1),gammaPriors=10**(seq(-3,0,by=.5)),
             adaptive=c(FALSE,TRUE),adaptiveType=c("norm","priorHyper"),
             stringsAsFactors = FALSE)
 simGrid<-simGrid %>% filter(!(adaptive==FALSE & adaptiveType=="priorHyper"))
 simGrid$iterations<-1000
 simGrid$burnIn<-100
-simGrid$auc<-simGrid$f1<-simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
+simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
 for(i in 1:nrow(simGrid)){
   # Gibbs sampler:
   bgl<-NULL
@@ -103,8 +105,8 @@ for(i in 1:nrow(simGrid)){
       if(simGrid$adaptive[i]){
         bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
                          adaptive=simGrid$adaptive[i],adaptiveType=simGrid$adaptiveType[i],
-                         priorHyper=abs(solve(sim)),gammaPriorr=simGrid$gammaPriorr[i],
-                         gammaPriors=simGrid$gammaPriors[i])
+                         priorHyper=abs(solve(sim)),gammaPriors=simGrid$gammaPriorr[i],
+                         gammaPriort=simGrid$gammaPriors[i])
       }else{
         bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
                          adaptive=simGrid$adaptive[i],lambdaPriora=simGrid$gammaPriorr[i],
@@ -112,9 +114,7 @@ for(i in 1:nrow(simGrid)){
       }
     )
   }
-  if(attempt>=3 & is.null(bgl)){
-    next
-  }
+  if(attempt>=3 & is.null(bgl)) next
   
   # Posterior inference object:
   bgl$Omegas<-lapply(bgl$Omegas,pCorFun)
@@ -122,6 +122,15 @@ for(i in 1:nrow(simGrid)){
   
   # Posterior median:
   medBgl<-pIBgl$posteriorMedian
+  
+  # Average lambdas:
+  if(simGrid$adaptive[i]){
+    simGrid$medLambda[i]<-median(sapply(bgl$lambdas,function(x) median(x[upper.tri(x)])))
+    simGrid$meanLambda[i]<-mean(sapply(bgl$lambdas,function(x) mean(x[upper.tri(x)])))
+  }else{
+    simGrid$medLambda[i]<-median(bgl$lambdas)
+    simGrid$meanLambda[i]<-mean(bgl$lambdas)
+  }
 
   # Topological error analysis:
   pCorsMedBgl<-pCorFun(medBgl)
@@ -136,16 +145,25 @@ for(i in 1:nrow(simGrid)){
 }
 
 ########### Sim Grid plots ###########
-ggplot(simGrid,aes(x=gammaPriorr,color=as.factor(gammaPriors),y=sens))+geom_point()+
-  geom_line()
+ggplot(simGrid %>% filter(adaptive==FALSE),
+       aes(x=gammaPriors,color=as.factor(gammaPriorr),y=medLambda))+
+  geom_point()+geom_line()
+
+ggplot(simGrid %>% filter(adaptive==TRUE,adaptiveType=="norm"),
+       aes(x=gammaPriors,color=as.factor(gammaPriorr),y=medLambda))+
+  geom_point()+geom_line()
+
+ggplot(simGrid %>% filter(adaptive==TRUE,adaptiveType=="priorHyper"),
+       aes(x=gammaPriors,color=as.factor(gammaPriorr),y=medLambda))+
+  geom_point()+geom_line()
 
 ########### Output graphs ###########
 graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors,
                    lambdaPriora=NULL,lambdaPriorb=NULL){
   # Sampler:
   bgl<-blockGLasso(x1,iterations=10000,burnIn=1000,adaptive=adaptive,
-                   adaptiveType=adaptiveType,priorHyper=(abs(solve(sim))**2),
-                   gammaPriorr=gammaPriorr,gammaPriors=gammaPriors,
+                   adaptiveType=adaptiveType,priorHyper=abs(solve(sim)),
+                   gammaPriors=gammaPriorr,gammaPriort=gammaPriors,
                    lambdaPriora=lambdaPriora,lambdaPriorb=lambdaPriorb)
   pIBgl<-posteriorInference(bgl)
   bglMed<-pIBgl$posteriorMedian
@@ -153,15 +171,15 @@ graphFun<-function(adaptive,adaptiveType,gammaPriorr,gammaPriors,
   
   # Graph
   bglG<-graph_from_adjacency_matrix(abs(bglMed),mode="undirected",diag=FALSE,weighted=TRUE)
-  E(bglG)$width<-(E(bglG)$weight**2)
+  E(bglG)$width<-1.5*(E(bglG)$weight**2)
   bglMed[lower.tri(bglMed,diag=TRUE)]<-NA
   E(bglG)$color<-c("darkred","navyblue")[as.integer(na.omit(c(t(bglMed)))>0)+1L]
   return(bglG)
 }
-aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=1,gammaPriors=5)
-aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=1)
+aIG<-graphFun(adaptive=TRUE,adaptiveType="priorHyper",gammaPriorr=1,gammaPriors=.01)
+aNG<-graphFun(adaptive=TRUE,adaptiveType="norm",gammaPriorr=1,gammaPriors=.3)
 rG<-graphFun(adaptive=FALSE,adaptiveType=NULL,gammaPriorr=NULL,gammaPriors=NULL,
-             lambdaPriora=1,lambdaPriorb=20)
+             lambdaPriora=.01,lambdaPriorb=3)
 
 png(file="Plots/aIG.png",height=6,width=6,units="in",res=900) # e
 par(bg=NA,mar=c(0,0,0,0))
