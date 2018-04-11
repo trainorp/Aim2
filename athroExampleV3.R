@@ -37,6 +37,11 @@ for(i in 1:nrow(key)){
   }
 }
 
+# Number of identified:
+table(!grepl("Unknown",key$biochemical) & !grepl("\\*",key$biochemical)) # 590
+table(!grepl("Unknown",key$biochemical) & grepl("\\*",key$biochemical)) # 73
+table(grepl("Unknown",key$biochemical)) # 369
+
 setwd("~/gdrive/Dissertation/Aim2")
 
 ############ Structural similarity ############
