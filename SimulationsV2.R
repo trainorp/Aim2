@@ -88,61 +88,107 @@ plot(gCor)
 dev.off()
 
 ########### Simulation function ############
+simGridFun<-function(x1,simGrid){
+  for(i in 1:nrow(simGrid)){
+    # Gibbs sampler:
+    bgl<-NULL
+    attempt<-0
+    while(is.null(bgl) & attempt<3){
+      attempt<-attempt+1
+      try(
+        if(simGrid$adaptive[i]){
+          bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
+                           adaptive=simGrid$adaptive[i],adaptiveType=simGrid$adaptiveType[i],
+                           priorHyper=eval(parse(text=simGrid$priorHyper[i])),
+                           gammaPriors=simGrid$gammaPriorr[i],gammaPriort=simGrid$gammaPriors[i])
+        }else{
+          bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
+                           adaptive=simGrid$adaptive[i],lambdaPriora=simGrid$gammaPriorr[i],
+                           lambdaPriorb=simGrid$gammaPriors[i])
+        }
+      )
+    }
+    if(attempt>=3 & is.null(bgl)) next
+    
+    # Posterior inference object:
+    bgl$Omegas<-lapply(bgl$Omegas,pCorFun)
+    pIBgl<-posteriorInference(bgl)
+    
+    # Posterior median:
+    medBgl<-pIBgl$posteriorMedian
+    
+    # Average lambdas:
+    if(simGrid$adaptive[i]){
+      simGrid$medLambda[i]<-median(sapply(bgl$lambdas,function(x) median(x[upper.tri(x)])))
+      simGrid$meanLambda[i]<-mean(sapply(bgl$lambdas,function(x) mean(x[upper.tri(x)])))
+    }else{
+      simGrid$medLambda[i]<-median(bgl$lambdas)
+      simGrid$meanLambda[i]<-mean(bgl$lambdas)
+    }
+    
+    # Topological error analysis:
+    pCorsMedBgl<-pCorFun(medBgl)
+    pCorsIndMedBgl<-abs(pCorsMedBgl)>.2
+    tabBgl<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedBgl)))
+    simGrid$sens[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl['TRUE',])
+    simGrid$spec[i]<-tabBgl['FALSE','FALSE']/sum(tabBgl['FALSE',])
+    simGrid$ppv[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl[,'TRUE'])
+    simGrid$f1[i]<-(2*simGrid$sens[i]*simGrid$ppv[i])/(simGrid$sens[i]+simGrid$ppv[i])
+    
+    simGrid$auc[i]<-as.numeric(pROC::roc(response=c(pCorsInd),predictor=c(abs(pCorsMedBgl)))$auc)
+  }
+  return(simGrid)
+}
+
+# Simulation Grid:
+pHGood<-abs(solve(sim))
 simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,1),gammaPriors=10**(seq(-3,0,by=.5)),
-            adaptive=c(FALSE,TRUE),adaptiveType=c("norm","priorHyper"),
-            stringsAsFactors = FALSE)
+                     adaptive=c(FALSE,TRUE),adaptiveType=c("norm","priorHyper"),
+                     priorHyper="pHGood",stringsAsFactors = FALSE)
 simGrid<-simGrid %>% filter(!(adaptive==FALSE & adaptiveType=="priorHyper"))
 simGrid$iterations<-1000
 simGrid$burnIn<-100
-simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
-for(i in 1:nrow(simGrid)){
-  # Gibbs sampler:
-  bgl<-NULL
-  attempt<-0
-  while(is.null(bgl) & attempt<3){
-    attempt<-attempt+1
-    try(
-      if(simGrid$adaptive[i]){
-        bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
-                         adaptive=simGrid$adaptive[i],adaptiveType=simGrid$adaptiveType[i],
-                         priorHyper=abs(solve(sim)),gammaPriors=simGrid$gammaPriorr[i],
-                         gammaPriort=simGrid$gammaPriors[i])
-      }else{
-        bgl<-blockGLasso(x1,iterations=simGrid$iterations[i],burnIn=simGrid$burnIn[i],
-                         adaptive=simGrid$adaptive[i],lambdaPriora=simGrid$gammaPriorr[i],
-                         lambdaPriorb=simGrid$gammaPriors[i])
-      }
-    )
-  }
-  if(attempt>=3 & is.null(bgl)) next
-  
-  # Posterior inference object:
-  bgl$Omegas<-lapply(bgl$Omegas,pCorFun)
-  pIBgl<-posteriorInference(bgl)
-  
-  # Posterior median:
-  medBgl<-pIBgl$posteriorMedian
-  
-  # Average lambdas:
-  if(simGrid$adaptive[i]){
-    simGrid$medLambda[i]<-median(sapply(bgl$lambdas,function(x) median(x[upper.tri(x)])))
-    simGrid$meanLambda[i]<-mean(sapply(bgl$lambdas,function(x) mean(x[upper.tri(x)])))
-  }else{
-    simGrid$medLambda[i]<-median(bgl$lambdas)
-    simGrid$meanLambda[i]<-mean(bgl$lambdas)
-  }
+simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-
+  simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
 
-  # Topological error analysis:
-  pCorsMedBgl<-pCorFun(medBgl)
-  pCorsIndMedBgl<-abs(pCorsMedBgl)>.2
-  tabBgl<-xtabs(~true+pred,data=data.frame(true=c(pCorsInd),pred=c(pCorsIndMedBgl)))
-  simGrid$sens[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl['TRUE',])
-  simGrid$spec[i]<-tabBgl['FALSE','FALSE']/sum(tabBgl['FALSE',])
-  simGrid$ppv[i]<-tabBgl['TRUE','TRUE']/sum(tabBgl[,'TRUE'])
-  simGrid$f1[i]<-(2*simGrid$sens[i]*simGrid$ppv[i])/(simGrid$sens[i]+simGrid$ppv[i])
-  
-  simGrid$auc[i]<-as.numeric(pROC::roc(response=c(pCorsInd),predictor=c(abs(pCorsMedBgl)))$auc)
+# One iteration:
+ptm<-proc.time()
+simGridBig<-simGridFun(x1,simGrid)
+proc.time()-ptm
+
+# For hyperparameter optimization:
+for(j in 1:20){
+  set.seed(j)
+  x2<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
+  simGridBig<-rbind(simGridBig,simGridFun(x2,simGrid))
 }
+simGridBigSum<-simGridBig %>% group_by(gammaPriorr,gammaPriors,adaptive,adaptiveType) %>% 
+  summarize(auc=mean(auc)) %>% arrange(adaptive,adaptiveType,desc(auc))
+
+# For simulation:
+# r= 0.10 s=0.01 Regular bgl
+# r=1.0 s=0.01 structure adaptive
+# r=1.0 s=0.0316 norm adaptive
+
+simGrid<-data.frame(gammaPriorr=c(.1,1,1),gammaPriors=c(0.01,0.01,0.031622777),
+                    adaptive=c(FALSE,TRUE,TRUE),adaptiveType=c("norm","norm","priorHyper"),
+                    priorHyper="pHGood",iterations=1000,burnIn=100)
+simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-
+  simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
+
+# LOH
+simGridFun(x1,simGrid)
+
+########### Simulation analysis ###########
+simGridBig<-simGridBig %>% select(-gammaPriorr,-gammaPriors,-iterations,-burnIn)
+simGridBig$Technique<-"BGL"
+simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="norm"]<-"Adaptive BGL"
+simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="priorHyper"]<-"Chem. Structure\nAdaptive BGL"
+simGridBig$Technique<-factor(simGridBig$Technique)
+
+ggplot(simGridBig,aes(x=auc,y=..density..,fill=Technique))+
+  geom_histogram(binwidth=.01,alpha=.5,position="identity")+
+  theme_bw()+xlab("AUC")+ylab("Density")
 
 ########### Sim Grid plots ###########
 ggplot(simGrid %>% filter(adaptive==FALSE),
