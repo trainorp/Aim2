@@ -110,6 +110,11 @@ simGridFun<-function(x1,simGrid){
     }
     if(attempt>=3 & is.null(bgl)) next
     
+    # Likelihood:
+    sigmas<-lapply(bgl$Omegas[(bgl$burnIn+1:length(bgl$Omegas)-bgl$burnIn)],solve)
+    simGrid$ll[i]<-mean(sapply(sigmas,function(x) 
+      -sum(log(mvtnorm::dmvnorm(x=x1,mean=rep(0,ncol(x1)),sigma=x)))))
+    
     # Posterior inference object:
     bgl$Omegas<-lapply(bgl$Omegas,pCorFun)
     pIBgl<-posteriorInference(bgl)
@@ -148,7 +153,7 @@ simGrid<-expand.grid(gammaPriorr=10**seq(-2,1.5,1),gammaPriors=10**(seq(-3,0,by=
 simGrid<-simGrid %>% filter(!(adaptive==FALSE & adaptiveType=="priorHyper"))
 simGrid$iterations<-1000
 simGrid$burnIn<-100
-simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-
+simGrid$medLambda<-simGrid$meanLambda<-simGrid$ll<-simGrid$auc<-simGrid$f1<-
   simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
 
 # One iteration:
@@ -165,7 +170,7 @@ for(j in 1:20){
 simGridBigSum<-simGridBig %>% group_by(gammaPriorr,gammaPriors,adaptive,adaptiveType) %>% 
   summarize(auc=mean(auc)) %>% arrange(adaptive,adaptiveType,desc(auc))
 
-# For simulation:
+# Hyperparameter optimization result:
 # r= 0.10 s=0.01 Regular bgl
 # r=1.0 s=0.01 structure adaptive
 # r=1.0 s=0.0316 norm adaptive
@@ -176,8 +181,15 @@ simGrid<-data.frame(gammaPriorr=c(.1,1,1),gammaPriors=c(0.01,0.01,0.031622777),
 simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-
   simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
 
-# LOH
-simGridFun(x1,simGrid)
+# Simulations for performance analysis:
+simGridBig<-data.frame()
+ptm<-proc.time()
+for(j in 1:100){
+  set.seed(j+333)
+  x2<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
+  simGridBig<-rbind(simGridBig,simGridFun(x2,simGrid))
+}
+proc.time()-ptm
 
 ########### Simulation analysis ###########
 simGridBig<-simGridBig %>% select(-gammaPriorr,-gammaPriors,-iterations,-burnIn)
