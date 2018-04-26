@@ -175,21 +175,29 @@ simGridBigSum<-simGridBig %>% group_by(gammaPriorr,gammaPriors,adaptive,adaptive
 # r=1.0 s=0.01 structure adaptive
 # r=1.0 s=0.0316 norm adaptive
 
-simGrid<-data.frame(gammaPriorr=c(.1,1,1),gammaPriors=c(0.01,0.01,0.031622777),
-                    adaptive=c(FALSE,TRUE,TRUE),adaptiveType=c("norm","norm","priorHyper"),
-                    priorHyper="pHGood",iterations=1000,burnIn=100)
+simGrid<-data.frame(gammaPriorr=c(.1,1,1,1),gammaPriors=c(0.01,0.01,0.031622777,0.031622777),
+                    adaptive=c(FALSE,TRUE,TRUE,TRUE),adaptiveType=c("norm","norm","priorHyper","priorHyper"),
+                    priorHyper=c("pHGood","pHGood","pHGood","pHBad"),iterations=1000,burnIn=100)
 simGrid$medLambda<-simGrid$meanLambda<-simGrid$auc<-simGrid$f1<-
   simGrid$ppv<-simGrid$spec<-simGrid$sens<-NA
+pHGood<-abs(solve(sim))
 
 # Simulations for performance analysis:
-simGridBig<-data.frame()
+library(doParallel)
+cl<-makeCluster(4)
+registerDoParallel(cl)
 ptm<-proc.time()
-for(j in 1:100){
+simGridBig<-foreach(j=1:2500,.combine="rbind",.packages=c("clusterGeneration","BayesianGLasso","tidyverse","pROC"),
+             .export=ls(.GlobalEnv),.errorhandling="remove",.inorder = FALSE) %dopar% {
   set.seed(j+333)
+  pHBad<-abs(solve(sim+matrix(rnorm(n=nrow(sim)*ncol(sim),mean=0,sd=.05),nrow=nrow(sim),
+                              ncol=ncol(sim))))
   x2<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
-  simGridBig<-rbind(simGridBig,simGridFun(x2,simGrid))
+  simGridFun(x2,simGrid)
 }
 proc.time()-ptm
+stopCluster(cl)
+save(simGridBig,file="simGridBig.RData")
 
 ########### Simulation analysis ###########
 simGridBig<-simGridBig %>% select(-gammaPriorr,-gammaPriors,-iterations,-burnIn)
