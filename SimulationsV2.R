@@ -188,7 +188,7 @@ cl<-makeCluster(4)
 registerDoParallel(cl)
 ptm<-proc.time()
 simGridBig<-foreach(j=1:2500,.combine="rbind",.packages=c("clusterGeneration","BayesianGLasso","tidyverse","pROC"),
-             .export=ls(.GlobalEnv),.errorhandling="stop",.inorder=FALSE) %dopar% {
+             .export=ls(.GlobalEnv),.errorhandling="pass",.inorder=FALSE) %dopar% {
   set.seed(j+333)
   pHBad<-abs(solve(sim+matrix(rnorm(n=nrow(sim)*ncol(sim),mean=0,sd=.025),nrow=nrow(sim),
                               ncol=ncol(sim))))
