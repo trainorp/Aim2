@@ -188,9 +188,9 @@ cl<-makeCluster(4)
 registerDoParallel(cl)
 ptm<-proc.time()
 simGridBig<-foreach(j=1:2500,.combine="rbind",.packages=c("clusterGeneration","BayesianGLasso","tidyverse","pROC"),
-             .export=ls(.GlobalEnv),.errorhandling="remove",.inorder = FALSE) %dopar% {
+             .export=ls(.GlobalEnv),.errorhandling="stop",.inorder=FALSE) %dopar% {
   set.seed(j+333)
-  pHBad<-abs(solve(sim+matrix(rnorm(n=nrow(sim)*ncol(sim),mean=0,sd=.05),nrow=nrow(sim),
+  pHBad<-abs(solve(sim+matrix(rnorm(n=nrow(sim)*ncol(sim),mean=0,sd=.025),nrow=nrow(sim),
                               ncol=ncol(sim))))
   x2<-mvrnorm(n=nObs,mu=rep(0,ncol(sig)),Sigma=4*sig)
   simGridFun(x2,simGrid)
@@ -198,17 +198,33 @@ simGridBig<-foreach(j=1:2500,.combine="rbind",.packages=c("clusterGeneration","B
 proc.time()-ptm
 stopCluster(cl)
 save(simGridBig,file="simGridBig.RData")
+load(file="simGridBig.RData")
 
 ########### Simulation analysis ###########
 simGridBig<-simGridBig %>% select(-gammaPriorr,-gammaPriors,-iterations,-burnIn)
 simGridBig$Technique<-"BGL"
 simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="norm"]<-"Adaptive BGL"
-simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="priorHyper"]<-"Chem. Structure\nAdaptive BGL"
+simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="priorHyper" & 
+                       simGridBig$priorHyper=="pHGood"]<-"Chem. Structure\nAdaptive BGL (Good prior)"
+simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="priorHyper" & 
+                       simGridBig$priorHyper=="pHBad"]<-"Chem. Structure\nAdaptive BGL (Poor prior)"
 simGridBig$Technique<-factor(simGridBig$Technique)
 
+########### Performance plots ###########
+png(file="Plots/AR1AUC.png",height=3,width=5.5,units="in",res=300)
 ggplot(simGridBig,aes(x=auc,y=..density..,fill=Technique))+
-  geom_histogram(binwidth=.01,alpha=.5,position="identity")+
+  geom_histogram(binwidth=.005,alpha=.75,position="identity")+
   theme_bw()+xlab("AUC")+ylab("Density")
+dev.off()
+
+png(file="Plots/AR1F1.png",height=3,width=5.5,units="in",res=300)
+ggplot(simGridBig,aes(x=f1,y=..density..,fill=Technique))+
+  geom_histogram(binwidth=.02,alpha=.75,position="identity")+
+  theme_bw()+xlab("F1 Measure")+ylab("Density")
+dev.off()
+
+########### Performance summary ###########
+AR1Summary<-simGridBig %>% dplyr::select(Technique,sens,spec,auc,f1,ll)
 
 ########### Sim Grid plots ###########
 ggplot(simGrid %>% filter(adaptive==FALSE),
