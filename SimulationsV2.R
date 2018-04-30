@@ -211,22 +211,35 @@ simGridBig$Technique[simGridBig$adaptive & simGridBig$adaptiveType=="priorHyper"
 simGridBig$Technique<-factor(simGridBig$Technique)
 
 ########### Performance plots ###########
-png(file="Plots/AR1AUC.png",height=3,width=5.5,units="in",res=300)
+png(file="Plots/AR1AUC.png",height=4,width=7,units="in",res=500,bg = "transparent")
 ggplot(simGridBig,aes(x=auc,y=..density..,fill=Technique))+
   geom_histogram(binwidth=.005,alpha=.75,position="identity")+
-  theme_bw()+xlab("AUC")+ylab("Density")
+  theme_bw()+xlab("AUC")+ylab("Density")+
+  guides(fill=guide_legend(keywidth=1,keyheight=1.5,default.unit="line"))+
+  theme(plot.background = element_rect(fill = "transparent"),
+        panel.background = element_rect(fill = "transparent"))
 dev.off()
 
-png(file="Plots/AR1F1.png",height=3,width=5.5,units="in",res=300)
+png(file="Plots/AR1F1.png",height=4,width=7,units="in",res=500,bg = "transparent")
 ggplot(simGridBig,aes(x=f1,y=..density..,fill=Technique))+
   geom_histogram(binwidth=.02,alpha=.75,position="identity")+
-  theme_bw()+xlab("F1 Measure")+ylab("Density")
+  theme_bw()+xlab("F1 Measure")+ylab("Density")+
+  guides(fill=guide_legend(keywidth=1,keyheight=1.5,default.unit="line"))+
+  theme(plot.background = element_rect(fill = "transparent"),
+        panel.background = element_rect(fill = "transparent"))
 dev.off()
 
 ########### Performance summary ###########
 AR1Summary<-simGridBig %>% dplyr::select(Technique,sens,spec,auc,f1,ll)
+sumFun<-function(x){
+  xMean<-round(mean(x,na.rm=TRUE),digits=4)
+  xSD<-round(sd(x,na.rm=TRUE),digits=3)
+  out<-paste0(xMean," + ",xSD)
+}
+AR1Summary<-AR1Summary %>% group_by(Technique) %>% 
+  summarize(sens=sumFun(sens),spec=sumFun(spec),sumFun(auc),sumFun(f1))
 
-########### Sim Grid plots ###########
+########### Sim Grid plots ##########
 ggplot(simGrid %>% filter(adaptive==FALSE),
        aes(x=gammaPriors,color=as.factor(gammaPriorr),y=medLambda))+
   geom_point()+geom_line()
