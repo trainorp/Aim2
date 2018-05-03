@@ -197,6 +197,10 @@ simGridBig<-foreach(j=1:2500,.combine="rbind",.packages=c("clusterGeneration","B
 }
 proc.time()-ptm
 stopCluster(cl)
+
+# No rep:
+simGridBig<-simGridBig %>% filter(!is.na(sens))
+
 save(simGridBig,file="simGridBig.RData")
 load(file="simGridBig.RData")
 
