@@ -202,6 +202,7 @@ stopCluster(cl)
 simGridBig<-simGridBig %>% filter(!is.na(sens))
 
 save(simGridBig,file="simGridBig.RData")
+
 load(file="simGridBig.RData")
 
 ########### Simulation analysis ###########
@@ -242,6 +243,7 @@ sumFun<-function(x){
 }
 AR1Summary<-AR1Summary %>% group_by(Technique) %>% 
   summarize(sens=sumFun(sens),spec=sumFun(spec),sumFun(auc),sumFun(f1))
+write.csv(AR1Summary,file="AR1Summary.csv",row.names=FALSE)
 
 ########### Sim Grid plots ##########
 ggplot(simGrid %>% filter(adaptive==FALSE),
