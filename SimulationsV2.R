@@ -4,7 +4,6 @@ library(tidyverse)
 library(igraph)
 library(clusterGeneration)
 library(BayesianGLasso)
-library(igraph)
 
 options(stringsAsFactors=FALSE)
 oldPar<-par()
