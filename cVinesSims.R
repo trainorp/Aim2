@@ -43,34 +43,40 @@ Conc<-solve(Sigmas)
 set.seed(333)
 Samp<-sample(1L:nrow(simData),size=50)
 simDataSamp<-simData[Samp,]
+simDataTest<-simData[!(1L:nrow(simData) %in% Samp),]
 
 ########### Simulated prior information ###########
 goodPrior<-Conc
 ConcP<-pCorFun(Conc)
 
 ########### BGL ###########
-simGrid<-expand.grid(adaptive=c(TRUE,FALSE),adaptiveType=c("norm","priorHyper"),
-                     stringsAsFactors=FALSE)
-simGrid<-simGrid[!(simGrid$adaptive==FALSE & simGrid$adaptiveType=="priorHyper"),]
-simGrid$err<-NA
-simGrid$gammaPriors<-1e4
-simGrid$gammaPriors[simGrid$adaptive & simGrid$adaptiveType=="norm"]<-1e0
-simGrid$gammaPriort<-1e-1
-simGrid$gammaPriors[simGrid$adaptive & simGrid$adaptiveType=="norm"]
-simGrid$lambdaii<-50
-simGrid$lambdaii[simGrid$adaptive & simGrid$adaptiveType=="norm"]
+simGridPriorAd<-data.frame(adaptive=TRUE,adaptiveType="priorHyper",
+                           gammaPriors=10**seq(0,4,1),gammaPriort=1e-1,lambdaii=10)
+simGridPriorNorm<-data.frame(adaptive=TRUE,adaptiveType="norm",
+                           gammaPriors=10**seq(0,4,1),gammaPriort=1e-1,lambdaii=10)
+simGridReg<-data.frame(adaptive=FALSE,adaptiveType="norm",gammaPriors=NA,
+                       gammaPriort=NA,lambdaii=NA)
 
+simGrid<-rbind(simGridPriorAd,simGridPriorNorm,simGridReg)
+simGrid$likelihood<-NA
 for(i in 1:nrow(simGrid)){
-  bgl1<-blockGLasso(simDataSamp,iterations=10000,burnIn=0,adaptive=simGrid$adaptive[i],
+  bgl1<-blockGLasso(simDataSamp,iterations=1000,burnIn=0,adaptive=simGrid$adaptive[i],
                     adaptiveType=simGrid$adaptiveType[i],
-                    priorHyper=1000*(abs(goodPrior)**1.22)+0.1,
-                    gammaPriors=10,gammaPriort=.1,lambdaii=10)
+                    priorHyper=100*(abs(goodPrior))+0.1,
+                    gammaPriors=simGrid$gammaPriors[i],
+                    gammaPriort=simGrid$gammaPriort[i],
+                    lambdaii=simGrid$lambdaii[i])
   bgl1PI<-posteriorInference(bgl1)
   bgl1PM<-bgl1PI$posteriorMean
   bgl1PMp<-pCorFun(bgl1PM)
-  bgl1Lambda<-bgl1$lambdas[[10000]]
-  simGrid$err[i]<-mean((bgl1PM-Conc)**2)
+  bgl1Lambda<-bgl1$lambdas[[1000]]
+  simGrid$likelihood[i]<-sum(mvtnorm::dmvnorm(x=simDataTest,
+              mean=rep(0,ncol(simDataTest)),sigma=solve(bgl1PM),log=TRUE))
 }
+
+########### Data likelihood function ###########
+sum(mvtnorm::dmvnorm(x=simDataTest,mean=rep(0,ncol(simDataTest)),
+                 sigma=solve(bgl1PM),log=TRUE))
 
 ########### Evaluation ###########
 simDataCov<-cov(simData)
