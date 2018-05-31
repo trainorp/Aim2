@@ -114,6 +114,34 @@ save(aiBGL1,file="aiBGL1.RData")
 load(file="atheroExampleV3Data.RData")
 load(file="aiBGL1.RData")
 
+# Markov Chain:
+# cholate -> glycochenodeoxycholate [190,273]
+# cholate -> cortisone [190,201]
+# cholate -> tyrosine [190,506]
+simMat2["cholate","glycochenodeoxycholate"]
+simMat2["cholate","cortisone"]
+simMat2["cholate","tyrosine"]
+tdf1<-data.frame(Metabolite="glycochenodeoxycholate\n(s = 0.86)",Time=1:1250,
+                 lambda=sapply(aiBGL1$lambdas,function(x) x[190,273]),
+                 Omegas=sapply(aiBGL1$Omegas,function(x) x[190,273]))
+tdf2<-data.frame(Metabolite="cortisone (s = 0.65)",Time=1:1250,
+                 lambda=sapply(aiBGL1$lambdas,function(x) x[190,201]),
+                 Omegas=sapply(aiBGL1$Omegas,function(x) x[190,201]))
+tdf3<-data.frame(Metabolite="tyrosine (s = 0.19)",Time=1:1250,
+                 lambda=sapply(aiBGL1$lambdas,function(x) x[190,506]),
+                 Omegas=sapply(aiBGL1$Omegas,function(x) x[190,506]))
+tdf<-rbind(tdf1,tdf2,tdf3)
+tdf<-tdf %>% gather(key=measure,value=value,-Time,-Metabolite)
+tdf$measure<-factor(tdf$measure,levels=c("lambda","Omegas"),
+                  labels=c(expression(lambda[ij]),expression(omega[ij])))
+tdf$Metabolite<-factor(tdf$Metabolite)
+tdf$Metabolite<-factor(tdf$Metabolite,levels=levels(tdf$Metabolite)[c(3,1,2)])
+png(file="Plots/MCMC.png",heigh=5.5,width=7,units="in",res=300)
+ggplot(tdf,aes(x=Time,y=value,color=Metabolite))+geom_line()+
+  facet_wrap(~measure,ncol=1,scales="free_y",labeller=label_parsed)+
+  xlab("Time")+ylab("Value")+theme_bw()
+dev.off()
+
 # Concentration matrix:
 pIaiBGL1<-posteriorInference(aiBGL1)
 aiBGL1Con<-pIaiBGL1$posteriorMedian
